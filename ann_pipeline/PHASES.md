@@ -197,3 +197,13 @@ Every uploaded frame was re-downloaded and matches the build object for object.
 
 Backup of the previous pre-labels and the project meta:
 `/mnt/D/datasets/ct_log/backups/phase2_20261016/<log>/<image>.json`.
+
+## 2026-10-21: `bumaska` tag meta added to projects that lacked it
+
+Reviewers refining in `ct-log-v5-preview` (384679) could not tick `bumaska`: the preview projects were created by
+`logs/report_20261010/preview_upload.py` (Vostro, untracked) with `sly.ProjectMeta(obj_classes=...)` copied from
+Phase2, which drops the tag metas. `upload_agreement.py` built its meta the same way. Phase2 and Human-collection
+were never affected (tag id 32945609 unchanged since the 2026-10-09 backup, 1192 tagged frames).
+
+`python -m ann_pipeline.utils.review_tag --fix` added the tag meta (no image or annotation changes) to 384366,
+384578, 384679, 384683, 375492 and 376641. Run the audit (without `--fix`) after creating any project.

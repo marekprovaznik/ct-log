@@ -122,6 +122,13 @@ Two Supervisely projects split the workflow:
 
 The `bumaska` image-level tag tracks review progress: tagged = human-verified.
 
+Every Supervisely project with Knot/Wood/Pith classes (Phase1 excepted) must define the `bumaska` tag meta,
+or reviewers cannot tick it. When creating a project, copy the whole Phase2 meta or pass it through
+`with_review_tag` (`ann_pipeline/utils/review_tag.py`); never build it from `obj_classes` alone. After any
+project creation run `python -m ann_pipeline.utils.review_tag` (exits 1 if a project lacks the tag; `--fix`
+adds it). On 2026-10-21 the previews 384366/384679/384683, agreement 384578 and SM_2025 375492/376641 lacked
+it because `logs/report_20261010/preview_upload.py` (Vostro) copied only Phase2's classes.
+
 Setup script: `python -m ann_pipeline.scripts.setup_phases --subset 4`
 
 See `ann_pipeline/PHASES.md` for full details.
