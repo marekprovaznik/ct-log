@@ -30,11 +30,11 @@ from tqdm import tqdm
 from ultralytics import YOLO
 
 from ann_pipeline.pith.detectors import snap_to_darkest
+from ann_pipeline.utils.review_tag import REVIEW_TAG_META
 from ann_pipeline.wood.detectors import threshold_peel
 
 PHASE1_ID = 377327
 PHASE2_ID = 377328
-HUMAN_TAG = "bumaska"
 CLASS_IDS = {"Wood": 1, "Knot": 2, "Pith": 3}
 SM_ROOT = "/mnt/D/datasets/ct_log/375492_SM_2025"
 NPZ_DIR = "experiments/sm2025_subset4_propagate/out"
@@ -45,15 +45,6 @@ CLASS_REGISTRY = [
     {"title": "Wood", "description": "", "shape": "any", "color": "#86FF00", "geometry_config": {}, "hotkey": ""},
     {"title": "Pith", "description": "", "shape": "point", "color": "#FF03D6", "geometry_config": {}, "hotkey": ""},
 ]
-PHASE2_TAG = {
-    "name": HUMAN_TAG,
-    "value_type": "none",
-    "color": "#FF0000",
-    "hotkey": "",
-    "applicable_type": "all",
-    "classes": [],
-    "target_type": "all",
-}
 
 
 def _largest_cc_fill(mask: np.ndarray) -> np.ndarray:
@@ -176,7 +167,7 @@ def build_auto_annotation(gray: np.ndarray, rgb: np.ndarray, pred_frame: np.ndar
 def _meta(include_tag: bool) -> dict:
     return {
         "classes": CLASS_REGISTRY,
-        "tags": [PHASE2_TAG] if include_tag else [],
+        "tags": [REVIEW_TAG_META] if include_tag else [],
         "projectType": "images",
         "projectSettings": {"multiView": {"enabled": False, "tagName": None, "tagId": None, "isSynced": False}},
     }

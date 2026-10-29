@@ -35,9 +35,8 @@ from tqdm import tqdm
 from ultralytics import YOLO
 
 from ann_pipeline.pith.detectors import snap_to_darkest
+from ann_pipeline.utils.review_tag import HUMAN_TAG, REVIEW_TAG_META
 from ann_pipeline.wood.detectors import threshold_largest_cc
-
-HUMAN_TAG = "bumaska"
 
 CLASS_REGISTRY = [
     {"title": "Knot", "shape": "any", "color": "#FF9D00"},
@@ -53,19 +52,7 @@ SAM_MODEL_CFG = "/home/mary/code/ct-log/thirdparty/MedSAM2/sam2/configs/sam2.1_h
 
 
 def _project_meta_json(include_bumaska: bool) -> dict:
-    tags = []
-    if include_bumaska:
-        tags.append(
-            {
-                "name": HUMAN_TAG,
-                "value_type": "none",
-                "color": "#FF0000",
-                "hotkey": "",
-                "applicable_type": "all",
-                "classes": [],
-                "target_type": "all",
-            }
-        )
+    tags = [REVIEW_TAG_META] if include_bumaska else []
     return {
         "classes": [
             {
