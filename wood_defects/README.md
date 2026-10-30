@@ -39,6 +39,12 @@ The stitcher joins consecutive images along the board (y) and writes the same la
   difference, which on the subset equals the difference between neighbouring rows inside an image.
 - IDs are `<scan prefix><5-digit index>`. A run is a maximal sequence of consecutive indices within one
   prefix, named `<first>-<last>`; missing indices start a new run.
+- Runs and boards (checked on the full dataset: 20,276 images, 407 prefixes, 1,122 runs): no run contains rows
+  without board between rows with board, so a run never spans two boards. A board can span several runs when
+  chunks are missing, and a prefix holds 1–3 boards. Board ends show as rows without board at the start or end
+  of a run; boards seen with both ends are typically 32 chunks long.
+- Seams that still differ by more than `--seam_warn` after the best shift are logged as warnings. On the full
+  dataset this happens only around chunk 111500001, whose board does not line up with its neighbours.
 - A defect crossing a chunk boundary is labelled with one box per chunk. Boxes of the same class touching the
   seam from both sides with overlapping x ranges are merged into one; the log reports merges, seam boxes
   without a partner, and touching pairs with different classes (not merged).

@@ -38,8 +38,14 @@ def main() -> None:
     parser.add_argument(
         "--max_shift_px",
         type=int,
-        default=60,
+        default=300,
         help="Largest sideways shift searched between consecutive chunks.",
+    )
+    parser.add_argument(
+        "--seam_warn",
+        type=float,
+        default=6.0,
+        help="Warn when the aligned seam differs by more grey levels than this.",
     )
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -92,6 +98,11 @@ def stitch_run(run: List[str], images: Dict[str, pathlib.Path], args: argparse.N
             shifts,
             max(residuals),
         )
+    for above, below, residual in zip(run, run[1:], residuals):
+        if residual > args.seam_warn:
+            logger.warning(
+                "%s -> %s: seam does not match (%.1f grey levels after the best shift)", above, below, residual
+            )
     Image.fromarray(compose(chunks, x_offsets)).save(args.output / "images" / ("%s.png" % name))
     canvas_width = LABEL_WIDTH + max(x_offsets)
     del chunks
