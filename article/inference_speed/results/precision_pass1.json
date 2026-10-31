@@ -1,0 +1,3637 @@
+{
+ "env": {
+  "host": "precision",
+  "gpu": "NVIDIA RTX 1000 Ada Generation Laptop GPU",
+  "nvidia_smi": "NVIDIA RTX 1000 Ada Generation Laptop GPU, 595.99.02, [N/A], 6141 MiB",
+  "cpu": "x86_64",
+  "torch": "2.7.0+cu128",
+  "cuda": "12.8",
+  "cudnn": 90701,
+  "smp": "0.5.0",
+  "checkpoint": "/mnt/D/models/ct_log/m5/seg_head_epoch_47.pth",
+  "config": "src/configs/train_kwp_v4_unet_effv2s_w1_dice_ts_48ep_dec512.yaml",
+  "native_size": 778,
+  "model_resolution": [
+   800,
+   800
+  ],
+  "input": "uint8 3-slice stack [z-1, z, z+1] in pinned host memory",
+  "e2e": "H2D, /255, bilinear 778->800, ImageNet normalisation, U-Net, softmax, bilinear 800->778, argmax, pith soft-argmax, D2H (TIFF decoding excluded)",
+  "model_only": "U-Net forward on a preprocessed device tensor",
+  "warmup": 20,
+  "iters": 50,
+  "repeats": 3,
+  "accuracy_slices": 299,
+  "accuracy_reference": "fp32",
+  "timestamp": "2026-10-31T10:26:45"
+ },
+ "runs": [
+  {
+   "variant": "fp32",
+   "dtype": "fp32",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 1,
+   "mode": "model",
+   "warmup_s": 4.87,
+   "latency_ms_mean": 71.939,
+   "latency_ms_p50": 71.99,
+   "latency_ms_p95": 73.102,
+   "fps_latency": 13.9,
+   "fps_throughput": 13.9,
+   "fps_throughput_repeats": [
+    13.9,
+    13.8,
+    13.9
+   ],
+   "fps_latency_repeats": [
+    14.0,
+    13.9,
+    13.9
+   ],
+   "peak_mem_mb": 512,
+   "gpu_before": {
+    "memory.used": "791",
+    "memory.total": "6141",
+    "utilization.gpu": "99",
+    "temperature.gpu": "61",
+    "clocks.sm": "1695",
+    "power.draw": "44.62"
+   },
+   "gpu_after": {
+    "memory.used": "791",
+    "memory.total": "6141",
+    "utilization.gpu": "99",
+    "temperature.gpu": "58",
+    "clocks.sm": "2010",
+    "power.draw": "41.17"
+   }
+  },
+  {
+   "variant": "fp32",
+   "dtype": "fp32",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 1,
+   "mode": "e2e",
+   "warmup_s": 1.45,
+   "latency_ms_mean": 72.881,
+   "latency_ms_p50": 72.898,
+   "latency_ms_p95": 74.225,
+   "fps_latency": 13.7,
+   "fps_throughput": 13.8,
+   "fps_throughput_repeats": [
+    13.6,
+    13.8,
+    13.8
+   ],
+   "fps_latency_repeats": [
+    13.7,
+    13.7,
+    13.8
+   ],
+   "peak_mem_mb": 490,
+   "gpu_before": {
+    "memory.used": "791",
+    "memory.total": "6141",
+    "utilization.gpu": "99",
+    "temperature.gpu": "59",
+    "clocks.sm": "1650",
+    "power.draw": "43.95"
+   },
+   "gpu_after": {
+    "memory.used": "791",
+    "memory.total": "6141",
+    "utilization.gpu": "99",
+    "temperature.gpu": "60",
+    "clocks.sm": "1665",
+    "power.draw": "44.93"
+   }
+  },
+  {
+   "variant": "fp32",
+   "dtype": "fp32",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 2,
+   "mode": "model",
+   "warmup_s": 8.9,
+   "latency_ms_mean": 153.74,
+   "latency_ms_p50": 153.765,
+   "latency_ms_p95": 155.396,
+   "fps_latency": 13.0,
+   "fps_throughput": 13.0,
+   "fps_throughput_repeats": [
+    13.0,
+    13.0,
+    13.0
+   ],
+   "fps_latency_repeats": [
+    13.0,
+    13.0,
+    13.0
+   ],
+   "peak_mem_mb": 920,
+   "gpu_before": {
+    "memory.used": "1477",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "1530",
+    "power.draw": "43.17"
+   },
+   "gpu_after": {
+    "memory.used": "1477",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "1965",
+    "power.draw": "43.94"
+   }
+  },
+  {
+   "variant": "fp32",
+   "dtype": "fp32",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 2,
+   "mode": "e2e",
+   "warmup_s": 3.14,
+   "latency_ms_mean": 155.359,
+   "latency_ms_p50": 155.214,
+   "latency_ms_p95": 157.258,
+   "fps_latency": 12.9,
+   "fps_throughput": 12.9,
+   "fps_throughput_repeats": [
+    12.8,
+    12.9,
+    12.9
+   ],
+   "fps_latency_repeats": [
+    12.8,
+    12.9,
+    12.9
+   ],
+   "peak_mem_mb": 876,
+   "gpu_before": {
+    "memory.used": "1477",
+    "memory.total": "6141",
+    "utilization.gpu": "99",
+    "temperature.gpu": "62",
+    "clocks.sm": "1755",
+    "power.draw": "40.75"
+   },
+   "gpu_after": {
+    "memory.used": "1477",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "1770",
+    "power.draw": "44.96"
+   }
+  },
+  {
+   "variant": "fp32",
+   "dtype": "fp32",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 4,
+   "mode": "model",
+   "warmup_s": 6.58,
+   "latency_ms_mean": 326.215,
+   "latency_ms_p50": 325.607,
+   "latency_ms_p95": 331.501,
+   "fps_latency": 12.3,
+   "fps_throughput": 12.2,
+   "fps_throughput_repeats": [
+    12.2,
+    12.2,
+    12.3
+   ],
+   "fps_latency_repeats": [
+    12.2,
+    12.3,
+    12.3
+   ],
+   "peak_mem_mb": 1736,
+   "gpu_before": {
+    "memory.used": "2789",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "1980",
+    "power.draw": "43.96"
+   },
+   "gpu_after": {
+    "memory.used": "2789",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1620",
+    "power.draw": "44.65"
+   }
+  },
+  {
+   "variant": "fp32",
+   "dtype": "fp32",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 4,
+   "mode": "e2e",
+   "warmup_s": 6.6,
+   "latency_ms_mean": 330.166,
+   "latency_ms_p50": 330.058,
+   "latency_ms_p95": 332.84,
+   "fps_latency": 12.1,
+   "fps_throughput": 12.1,
+   "fps_throughput_repeats": [
+    12.1,
+    12.1,
+    12.1
+   ],
+   "fps_latency_repeats": [
+    12.1,
+    12.1,
+    12.1
+   ],
+   "peak_mem_mb": 1648,
+   "gpu_before": {
+    "memory.used": "2789",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1545",
+    "power.draw": "43.47"
+   },
+   "gpu_after": {
+    "memory.used": "2789",
+    "memory.total": "6141",
+    "utilization.gpu": "99",
+    "temperature.gpu": "61",
+    "clocks.sm": "1725",
+    "power.draw": "44.76"
+   }
+  },
+  {
+   "variant": "fp32",
+   "dtype": "fp32",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 8,
+   "mode": "model",
+   "warmup_s": 28.7,
+   "latency_ms_mean": 657.328,
+   "latency_ms_p50": 657.318,
+   "latency_ms_p95": 659.91,
+   "fps_latency": 12.2,
+   "fps_throughput": 12.1,
+   "fps_throughput_repeats": [
+    12.1,
+    12.1,
+    12.1
+   ],
+   "fps_latency_repeats": [
+    12.2,
+    12.2,
+    12.2
+   ],
+   "peak_mem_mb": 3365,
+   "gpu_before": {
+    "memory.used": "4727",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "1665",
+    "power.draw": "44.64"
+   },
+   "gpu_after": {
+    "memory.used": "4727",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "59",
+    "clocks.sm": "1755",
+    "power.draw": "43.99"
+   }
+  },
+  {
+   "variant": "fp32",
+   "dtype": "fp32",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 8,
+   "mode": "e2e",
+   "warmup_s": 13.37,
+   "latency_ms_mean": 666.186,
+   "latency_ms_p50": 666.286,
+   "latency_ms_p95": 667.82,
+   "fps_latency": 12.0,
+   "fps_throughput": 12.0,
+   "fps_throughput_repeats": [
+    12.0,
+    12.0,
+    12.0
+   ],
+   "fps_latency_repeats": [
+    12.0,
+    12.0,
+    12.0
+   ],
+   "peak_mem_mb": 3191,
+   "gpu_before": {
+    "memory.used": "4727",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1680",
+    "power.draw": "44.28"
+   },
+   "gpu_after": {
+    "memory.used": "4727",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "59",
+    "clocks.sm": "1830",
+    "power.draw": "43.99"
+   }
+  },
+  {
+   "variant": "fp32",
+   "dtype": "fp32",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 16,
+   "mode": "model",
+   "error": "oom"
+  },
+  {
+   "variant": "fp32",
+   "dtype": "fp32",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 16,
+   "mode": "e2e",
+   "error": "oom"
+  },
+  {
+   "variant": "tf32",
+   "dtype": "fp32",
+   "tf32": true,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 1,
+   "mode": "model",
+   "warmup_s": 2.98,
+   "latency_ms_mean": 53.248,
+   "latency_ms_p50": 53.288,
+   "latency_ms_p95": 54.229,
+   "fps_latency": 18.8,
+   "fps_throughput": 18.8,
+   "fps_throughput_repeats": [
+    18.9,
+    18.8,
+    18.7
+   ],
+   "fps_latency_repeats": [
+    18.9,
+    18.8,
+    18.6
+   ],
+   "peak_mem_mb": 512,
+   "gpu_before": {
+    "memory.used": "757",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "1980",
+    "power.draw": "44.63"
+   },
+   "gpu_after": {
+    "memory.used": "757",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "2025",
+    "power.draw": "43.98"
+   }
+  },
+  {
+   "variant": "tf32",
+   "dtype": "fp32",
+   "tf32": true,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 1,
+   "mode": "e2e",
+   "warmup_s": 1.09,
+   "latency_ms_mean": 54.541,
+   "latency_ms_p50": 54.476,
+   "latency_ms_p95": 55.772,
+   "fps_latency": 18.3,
+   "fps_throughput": 18.4,
+   "fps_throughput_repeats": [
+    18.4,
+    18.3,
+    18.4
+   ],
+   "fps_latency_repeats": [
+    18.3,
+    18.3,
+    18.4
+   ],
+   "peak_mem_mb": 490,
+   "gpu_before": {
+    "memory.used": "757",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "59",
+    "clocks.sm": "1815",
+    "power.draw": "44.71"
+   },
+   "gpu_after": {
+    "memory.used": "757",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1740",
+    "power.draw": "44.23"
+   }
+  },
+  {
+   "variant": "tf32",
+   "dtype": "fp32",
+   "tf32": true,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 2,
+   "mode": "model",
+   "warmup_s": 5.25,
+   "latency_ms_mean": 121.541,
+   "latency_ms_p50": 121.447,
+   "latency_ms_p95": 122.993,
+   "fps_latency": 16.5,
+   "fps_throughput": 16.5,
+   "fps_throughput_repeats": [
+    16.5,
+    16.5,
+    16.5
+   ],
+   "fps_latency_repeats": [
+    16.5,
+    16.4,
+    16.5
+   ],
+   "peak_mem_mb": 920,
+   "gpu_before": {
+    "memory.used": "1295",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "59",
+    "clocks.sm": "1830",
+    "power.draw": "44.25"
+   },
+   "gpu_after": {
+    "memory.used": "1295",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "59",
+    "clocks.sm": "2010",
+    "power.draw": "44.68"
+   }
+  },
+  {
+   "variant": "tf32",
+   "dtype": "fp32",
+   "tf32": true,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 2,
+   "mode": "e2e",
+   "warmup_s": 2.48,
+   "latency_ms_mean": 124.053,
+   "latency_ms_p50": 123.999,
+   "latency_ms_p95": 126.16,
+   "fps_latency": 16.1,
+   "fps_throughput": 16.2,
+   "fps_throughput_repeats": [
+    16.2,
+    16.2,
+    16.1
+   ],
+   "fps_latency_repeats": [
+    16.1,
+    16.1,
+    16.2
+   ],
+   "peak_mem_mb": 876,
+   "gpu_before": {
+    "memory.used": "1295",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "1590",
+    "power.draw": "44.41"
+   },
+   "gpu_after": {
+    "memory.used": "1295",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1935",
+    "power.draw": "44.57"
+   }
+  },
+  {
+   "variant": "tf32",
+   "dtype": "fp32",
+   "tf32": true,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 4,
+   "mode": "model",
+   "warmup_s": 5.14,
+   "latency_ms_mean": 256.64,
+   "latency_ms_p50": 256.607,
+   "latency_ms_p95": 258.519,
+   "fps_latency": 15.6,
+   "fps_throughput": 15.6,
+   "fps_throughput_repeats": [
+    15.6,
+    15.6,
+    15.6
+   ],
+   "fps_latency_repeats": [
+    15.6,
+    15.6,
+    15.6
+   ],
+   "peak_mem_mb": 1736,
+   "gpu_before": {
+    "memory.used": "2665",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1950",
+    "power.draw": "44.42"
+   },
+   "gpu_after": {
+    "memory.used": "2665",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "1650",
+    "power.draw": "44.64"
+   }
+  },
+  {
+   "variant": "tf32",
+   "dtype": "fp32",
+   "tf32": true,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 4,
+   "mode": "e2e",
+   "warmup_s": 5.22,
+   "latency_ms_mean": 261.103,
+   "latency_ms_p50": 261.064,
+   "latency_ms_p95": 262.53,
+   "fps_latency": 15.3,
+   "fps_throughput": 15.3,
+   "fps_throughput_repeats": [
+    15.3,
+    15.3,
+    15.3
+   ],
+   "fps_latency_repeats": [
+    15.3,
+    15.3,
+    15.3
+   ],
+   "peak_mem_mb": 1648,
+   "gpu_before": {
+    "memory.used": "2665",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "1620",
+    "power.draw": "44.54"
+   },
+   "gpu_after": {
+    "memory.used": "2665",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "2040",
+    "power.draw": "44.83"
+   }
+  },
+  {
+   "variant": "tf32",
+   "dtype": "fp32",
+   "tf32": true,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 8,
+   "mode": "model",
+   "warmup_s": 17.91,
+   "latency_ms_mean": 525.684,
+   "latency_ms_p50": 525.687,
+   "latency_ms_p95": 527.806,
+   "fps_latency": 15.2,
+   "fps_throughput": 15.2,
+   "fps_throughput_repeats": [
+    15.2,
+    15.2,
+    15.2
+   ],
+   "fps_latency_repeats": [
+    15.2,
+    15.2,
+    15.2
+   ],
+   "peak_mem_mb": 3365,
+   "gpu_before": {
+    "memory.used": "5139",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1950",
+    "power.draw": "44.29"
+   },
+   "gpu_after": {
+    "memory.used": "5139",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "1815",
+    "power.draw": "44.32"
+   }
+  },
+  {
+   "variant": "tf32",
+   "dtype": "fp32",
+   "tf32": true,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 8,
+   "mode": "e2e",
+   "warmup_s": 10.7,
+   "latency_ms_mean": 534.913,
+   "latency_ms_p50": 534.988,
+   "latency_ms_p95": 536.768,
+   "fps_latency": 15.0,
+   "fps_throughput": 14.9,
+   "fps_throughput_repeats": [
+    14.9,
+    14.9,
+    15.0
+   ],
+   "fps_latency_repeats": [
+    14.9,
+    15.0,
+    15.0
+   ],
+   "peak_mem_mb": 3188,
+   "gpu_before": {
+    "memory.used": "5139",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "1755",
+    "power.draw": "42.50"
+   },
+   "gpu_after": {
+    "memory.used": "5139",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "2085",
+    "power.draw": "44.65"
+   }
+  },
+  {
+   "variant": "tf32",
+   "dtype": "fp32",
+   "tf32": true,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 16,
+   "mode": "model",
+   "error": "oom"
+  },
+  {
+   "variant": "tf32",
+   "dtype": "fp32",
+   "tf32": true,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 16,
+   "mode": "e2e",
+   "error": "oom"
+  },
+  {
+   "variant": "bf16_autocast",
+   "dtype": "bf16_autocast",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 1,
+   "mode": "model",
+   "warmup_s": 1.6,
+   "latency_ms_mean": 40.652,
+   "latency_ms_p50": 40.532,
+   "latency_ms_p95": 42.011,
+   "fps_latency": 24.6,
+   "fps_throughput": 26.1,
+   "fps_throughput_repeats": [
+    26.1,
+    26.0,
+    26.1
+   ],
+   "fps_latency_repeats": [
+    24.4,
+    24.6,
+    24.8
+   ],
+   "peak_mem_mb": 609,
+   "gpu_before": {
+    "memory.used": "921",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "59",
+    "clocks.sm": "1740",
+    "power.draw": "40.21"
+   },
+   "gpu_after": {
+    "memory.used": "921",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "59",
+    "clocks.sm": "1935",
+    "power.draw": "44.42"
+   }
+  },
+  {
+   "variant": "bf16_autocast",
+   "dtype": "bf16_autocast",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 1,
+   "mode": "e2e",
+   "warmup_s": 0.83,
+   "latency_ms_mean": 41.546,
+   "latency_ms_p50": 41.239,
+   "latency_ms_p95": 43.031,
+   "fps_latency": 24.1,
+   "fps_throughput": 24.0,
+   "fps_throughput_repeats": [
+    24.1,
+    23.9,
+    24.0
+   ],
+   "fps_latency_repeats": [
+    23.9,
+    24.2,
+    24.1
+   ],
+   "peak_mem_mb": 587,
+   "gpu_before": {
+    "memory.used": "921",
+    "memory.total": "6141",
+    "utilization.gpu": "92",
+    "temperature.gpu": "59",
+    "clocks.sm": "2055",
+    "power.draw": "38.51"
+   },
+   "gpu_after": {
+    "memory.used": "921",
+    "memory.total": "6141",
+    "utilization.gpu": "94",
+    "temperature.gpu": "61",
+    "clocks.sm": "2055",
+    "power.draw": "44.38"
+   }
+  },
+  {
+   "variant": "bf16_autocast",
+   "dtype": "bf16_autocast",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 2,
+   "mode": "model",
+   "warmup_s": 2.77,
+   "latency_ms_mean": 79.65,
+   "latency_ms_p50": 79.645,
+   "latency_ms_p95": 80.512,
+   "fps_latency": 25.1,
+   "fps_throughput": 25.1,
+   "fps_throughput_repeats": [
+    25.0,
+    25.2,
+    25.1
+   ],
+   "fps_latency_repeats": [
+    25.0,
+    25.2,
+    25.2
+   ],
+   "peak_mem_mb": 1063,
+   "gpu_before": {
+    "memory.used": "1583",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "1905",
+    "power.draw": "44.11"
+   },
+   "gpu_after": {
+    "memory.used": "1583",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "2010",
+    "power.draw": "44.07"
+   }
+  },
+  {
+   "variant": "bf16_autocast",
+   "dtype": "bf16_autocast",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 2,
+   "mode": "e2e",
+   "warmup_s": 1.63,
+   "latency_ms_mean": 81.945,
+   "latency_ms_p50": 81.93,
+   "latency_ms_p95": 82.746,
+   "fps_latency": 24.4,
+   "fps_throughput": 24.4,
+   "fps_throughput_repeats": [
+    24.5,
+    24.4,
+    24.4
+   ],
+   "fps_latency_repeats": [
+    24.3,
+    24.4,
+    24.4
+   ],
+   "peak_mem_mb": 1018,
+   "gpu_before": {
+    "memory.used": "1583",
+    "memory.total": "6141",
+    "utilization.gpu": "99",
+    "temperature.gpu": "61",
+    "clocks.sm": "1875",
+    "power.draw": "44.22"
+   },
+   "gpu_after": {
+    "memory.used": "1583",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1845",
+    "power.draw": "44.85"
+   }
+  },
+  {
+   "variant": "bf16_autocast",
+   "dtype": "bf16_autocast",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 4,
+   "mode": "model",
+   "warmup_s": 3.37,
+   "latency_ms_mean": 167.455,
+   "latency_ms_p50": 167.339,
+   "latency_ms_p95": 169.219,
+   "fps_latency": 23.9,
+   "fps_throughput": 23.8,
+   "fps_throughput_repeats": [
+    23.8,
+    23.8,
+    23.9
+   ],
+   "fps_latency_repeats": [
+    23.8,
+    23.9,
+    23.9
+   ],
+   "peak_mem_mb": 1970,
+   "gpu_before": {
+    "memory.used": "3051",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1665",
+    "power.draw": "43.41"
+   },
+   "gpu_after": {
+    "memory.used": "3051",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "1845",
+    "power.draw": "44.24"
+   }
+  },
+  {
+   "variant": "bf16_autocast",
+   "dtype": "bf16_autocast",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 4,
+   "mode": "e2e",
+   "warmup_s": 3.45,
+   "latency_ms_mean": 172.607,
+   "latency_ms_p50": 172.678,
+   "latency_ms_p95": 174.317,
+   "fps_latency": 23.2,
+   "fps_throughput": 23.2,
+   "fps_throughput_repeats": [
+    23.2,
+    23.2,
+    23.2
+   ],
+   "fps_latency_repeats": [
+    23.2,
+    23.2,
+    23.1
+   ],
+   "peak_mem_mb": 1881,
+   "gpu_before": {
+    "memory.used": "3051",
+    "memory.total": "6141",
+    "utilization.gpu": "99",
+    "temperature.gpu": "61",
+    "clocks.sm": "1860",
+    "power.draw": "43.64"
+   },
+   "gpu_after": {
+    "memory.used": "3051",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "2145",
+    "power.draw": "44.99"
+   }
+  },
+  {
+   "variant": "bf16_autocast",
+   "dtype": "bf16_autocast",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 8,
+   "mode": "model",
+   "warmup_s": 10.47,
+   "latency_ms_mean": 348.934,
+   "latency_ms_p50": 348.716,
+   "latency_ms_p95": 351.937,
+   "fps_latency": 22.9,
+   "fps_throughput": 23.0,
+   "fps_throughput_repeats": [
+    23.0,
+    23.0,
+    23.0
+   ],
+   "fps_latency_repeats": [
+    22.9,
+    23.0,
+    22.9
+   ],
+   "peak_mem_mb": 3779,
+   "gpu_before": {
+    "memory.used": "5371",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "1800",
+    "power.draw": "45.19"
+   },
+   "gpu_after": {
+    "memory.used": "5371",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1800",
+    "power.draw": "44.78"
+   }
+  },
+  {
+   "variant": "bf16_autocast",
+   "dtype": "bf16_autocast",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 8,
+   "mode": "e2e",
+   "warmup_s": 7.18,
+   "latency_ms_mean": 358.789,
+   "latency_ms_p50": 358.849,
+   "latency_ms_p95": 361.081,
+   "fps_latency": 22.3,
+   "fps_throughput": 22.3,
+   "fps_throughput_repeats": [
+    22.3,
+    22.3,
+    22.3
+   ],
+   "fps_latency_repeats": [
+    22.3,
+    22.3,
+    22.3
+   ],
+   "peak_mem_mb": 3603,
+   "gpu_before": {
+    "memory.used": "5371",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "1860",
+    "power.draw": "44.21"
+   },
+   "gpu_after": {
+    "memory.used": "5371",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1920",
+    "power.draw": "44.69"
+   }
+  },
+  {
+   "variant": "bf16_autocast",
+   "dtype": "bf16_autocast",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 16,
+   "mode": "model",
+   "error": "oom"
+  },
+  {
+   "variant": "bf16_autocast",
+   "dtype": "bf16_autocast",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 16,
+   "mode": "e2e",
+   "error": "oom"
+  },
+  {
+   "variant": "fp16_autocast",
+   "dtype": "fp16_autocast",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 1,
+   "mode": "model",
+   "warmup_s": 2.19,
+   "latency_ms_mean": 39.065,
+   "latency_ms_p50": 38.933,
+   "latency_ms_p95": 40.181,
+   "fps_latency": 25.6,
+   "fps_throughput": 27.9,
+   "fps_throughput_repeats": [
+    27.9,
+    27.9,
+    27.9
+   ],
+   "fps_latency_repeats": [
+    25.5,
+    25.7,
+    25.7
+   ],
+   "peak_mem_mb": 609,
+   "gpu_before": {
+    "memory.used": "925",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "1710",
+    "power.draw": "39.18"
+   },
+   "gpu_after": {
+    "memory.used": "925",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1830",
+    "power.draw": "44.56"
+   }
+  },
+  {
+   "variant": "fp16_autocast",
+   "dtype": "fp16_autocast",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 1,
+   "mode": "e2e",
+   "warmup_s": 0.81,
+   "latency_ms_mean": 39.868,
+   "latency_ms_p50": 39.621,
+   "latency_ms_p95": 41.121,
+   "fps_latency": 25.1,
+   "fps_throughput": 25.2,
+   "fps_throughput_repeats": [
+    25.2,
+    25.3,
+    25.1
+   ],
+   "fps_latency_repeats": [
+    25.1,
+    25.2,
+    25.0
+   ],
+   "peak_mem_mb": 587,
+   "gpu_before": {
+    "memory.used": "925",
+    "memory.total": "6141",
+    "utilization.gpu": "88",
+    "temperature.gpu": "61",
+    "clocks.sm": "1905",
+    "power.draw": "37.47"
+   },
+   "gpu_after": {
+    "memory.used": "925",
+    "memory.total": "6141",
+    "utilization.gpu": "92",
+    "temperature.gpu": "60",
+    "clocks.sm": "2040",
+    "power.draw": "44.35"
+   }
+  },
+  {
+   "variant": "fp16_autocast",
+   "dtype": "fp16_autocast",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 2,
+   "mode": "model",
+   "warmup_s": 3.33,
+   "latency_ms_mean": 73.944,
+   "latency_ms_p50": 73.909,
+   "latency_ms_p95": 74.687,
+   "fps_latency": 27.0,
+   "fps_throughput": 27.1,
+   "fps_throughput_repeats": [
+    27.1,
+    27.1,
+    27.1
+   ],
+   "fps_latency_repeats": [
+    27.1,
+    27.0,
+    27.1
+   ],
+   "peak_mem_mb": 1063,
+   "gpu_before": {
+    "memory.used": "1513",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "1860",
+    "power.draw": "44.67"
+   },
+   "gpu_after": {
+    "memory.used": "1513",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "1845",
+    "power.draw": "44.20"
+   }
+  },
+  {
+   "variant": "fp16_autocast",
+   "dtype": "fp16_autocast",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 2,
+   "mode": "e2e",
+   "warmup_s": 1.52,
+   "latency_ms_mean": 76.657,
+   "latency_ms_p50": 76.503,
+   "latency_ms_p95": 77.78,
+   "fps_latency": 26.1,
+   "fps_throughput": 26.2,
+   "fps_throughput_repeats": [
+    26.1,
+    26.2,
+    26.2
+   ],
+   "fps_latency_repeats": [
+    26.0,
+    26.0,
+    26.2
+   ],
+   "peak_mem_mb": 1018,
+   "gpu_before": {
+    "memory.used": "1513",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1875",
+    "power.draw": "45.26"
+   },
+   "gpu_after": {
+    "memory.used": "1513",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1800",
+    "power.draw": "44.84"
+   }
+  },
+  {
+   "variant": "fp16_autocast",
+   "dtype": "fp16_autocast",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 4,
+   "mode": "model",
+   "warmup_s": 3.16,
+   "latency_ms_mean": 157.281,
+   "latency_ms_p50": 157.286,
+   "latency_ms_p95": 158.447,
+   "fps_latency": 25.4,
+   "fps_throughput": 25.5,
+   "fps_throughput_repeats": [
+    25.5,
+    25.5,
+    25.4
+   ],
+   "fps_latency_repeats": [
+    25.4,
+    25.4,
+    25.5
+   ],
+   "peak_mem_mb": 1969,
+   "gpu_before": {
+    "memory.used": "2981",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "2115",
+    "power.draw": "43.61"
+   },
+   "gpu_after": {
+    "memory.used": "2981",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "2010",
+    "power.draw": "43.84"
+   }
+  },
+  {
+   "variant": "fp16_autocast",
+   "dtype": "fp16_autocast",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 4,
+   "mode": "e2e",
+   "warmup_s": 3.24,
+   "latency_ms_mean": 162.21,
+   "latency_ms_p50": 162.21,
+   "latency_ms_p95": 163.342,
+   "fps_latency": 24.7,
+   "fps_throughput": 24.6,
+   "fps_throughput_repeats": [
+    24.6,
+    24.7,
+    24.6
+   ],
+   "fps_latency_repeats": [
+    24.7,
+    24.6,
+    24.7
+   ],
+   "peak_mem_mb": 1880,
+   "gpu_before": {
+    "memory.used": "2981",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1890",
+    "power.draw": "43.92"
+   },
+   "gpu_after": {
+    "memory.used": "2981",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "1905",
+    "power.draw": "44.74"
+   }
+  },
+  {
+   "variant": "fp16_autocast",
+   "dtype": "fp16_autocast",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 8,
+   "mode": "model",
+   "warmup_s": 11.02,
+   "latency_ms_mean": 326.701,
+   "latency_ms_p50": 326.762,
+   "latency_ms_p95": 328.546,
+   "fps_latency": 24.5,
+   "fps_throughput": 24.5,
+   "fps_throughput_repeats": [
+    24.5,
+    24.5,
+    24.5
+   ],
+   "fps_latency_repeats": [
+    24.5,
+    24.5,
+    24.5
+   ],
+   "peak_mem_mb": 3780,
+   "gpu_before": {
+    "memory.used": "5339",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1815",
+    "power.draw": "44.19"
+   },
+   "gpu_after": {
+    "memory.used": "5339",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "1830",
+    "power.draw": "44.56"
+   }
+  },
+  {
+   "variant": "fp16_autocast",
+   "dtype": "fp16_autocast",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 8,
+   "mode": "e2e",
+   "warmup_s": 6.73,
+   "latency_ms_mean": 336.821,
+   "latency_ms_p50": 336.845,
+   "latency_ms_p95": 338.38,
+   "fps_latency": 23.8,
+   "fps_throughput": 23.7,
+   "fps_throughput_repeats": [
+    23.7,
+    23.7,
+    23.8
+   ],
+   "fps_latency_repeats": [
+    23.7,
+    23.8,
+    23.7
+   ],
+   "peak_mem_mb": 3603,
+   "gpu_before": {
+    "memory.used": "5339",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "1785",
+    "power.draw": "44.48"
+   },
+   "gpu_after": {
+    "memory.used": "5339",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1845",
+    "power.draw": "44.62"
+   }
+  },
+  {
+   "variant": "fp16_autocast",
+   "dtype": "fp16_autocast",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 16,
+   "mode": "model",
+   "error": "oom"
+  },
+  {
+   "variant": "fp16_autocast",
+   "dtype": "fp16_autocast",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 16,
+   "mode": "e2e",
+   "error": "oom"
+  },
+  {
+   "variant": "fp16",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 1,
+   "mode": "model",
+   "warmup_s": 0.62,
+   "latency_ms_mean": 32.58,
+   "latency_ms_p50": 32.509,
+   "latency_ms_p95": 33.801,
+   "fps_latency": 30.7,
+   "fps_throughput": 32.4,
+   "fps_throughput_repeats": [
+    31.8,
+    32.4,
+    32.4
+   ],
+   "fps_latency_repeats": [
+    30.6,
+    31.0,
+    30.5
+   ],
+   "peak_mem_mb": 333,
+   "gpu_before": {
+    "memory.used": "2257",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1740",
+    "power.draw": "41.38"
+   },
+   "gpu_after": {
+    "memory.used": "2257",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "1800",
+    "power.draw": "44.39"
+   }
+  },
+  {
+   "variant": "fp16",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 1,
+   "mode": "e2e",
+   "warmup_s": 0.68,
+   "latency_ms_mean": 33.139,
+   "latency_ms_p50": 32.976,
+   "latency_ms_p95": 34.168,
+   "fps_latency": 30.2,
+   "fps_throughput": 30.3,
+   "fps_throughput_repeats": [
+    30.1,
+    30.4,
+    30.3
+   ],
+   "fps_latency_repeats": [
+    29.9,
+    30.4,
+    30.2
+   ],
+   "peak_mem_mb": 322,
+   "gpu_before": {
+    "memory.used": "2257",
+    "memory.total": "6141",
+    "utilization.gpu": "81",
+    "temperature.gpu": "61",
+    "clocks.sm": "2160",
+    "power.draw": "39.01"
+   },
+   "gpu_after": {
+    "memory.used": "2257",
+    "memory.total": "6141",
+    "utilization.gpu": "95",
+    "temperature.gpu": "62",
+    "clocks.sm": "1980",
+    "power.draw": "44.29"
+   }
+  },
+  {
+   "variant": "fp16",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 2,
+   "mode": "model",
+   "warmup_s": 1.28,
+   "latency_ms_mean": 64.577,
+   "latency_ms_p50": 64.673,
+   "latency_ms_p95": 65.494,
+   "fps_latency": 31.0,
+   "fps_throughput": 31.0,
+   "fps_throughput_repeats": [
+    31.0,
+    31.0,
+    31.0
+   ],
+   "fps_latency_repeats": [
+    31.0,
+    30.9,
+    30.9
+   ],
+   "peak_mem_mb": 617,
+   "gpu_before": {
+    "memory.used": "2257",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "1980",
+    "power.draw": "44.57"
+   },
+   "gpu_after": {
+    "memory.used": "2257",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "1740",
+    "power.draw": "44.62"
+   }
+  },
+  {
+   "variant": "fp16",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 2,
+   "mode": "e2e",
+   "warmup_s": 1.33,
+   "latency_ms_mean": 66.587,
+   "latency_ms_p50": 66.606,
+   "latency_ms_p95": 67.299,
+   "fps_latency": 30.0,
+   "fps_throughput": 30.0,
+   "fps_throughput_repeats": [
+    30.0,
+    30.0,
+    30.0
+   ],
+   "fps_latency_repeats": [
+    30.1,
+    30.0,
+    30.0
+   ],
+   "peak_mem_mb": 595,
+   "gpu_before": {
+    "memory.used": "2257",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "1755",
+    "power.draw": "44.79"
+   },
+   "gpu_after": {
+    "memory.used": "2257",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "1755",
+    "power.draw": "44.57"
+   }
+  },
+  {
+   "variant": "fp16",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 4,
+   "mode": "model",
+   "warmup_s": 2.76,
+   "latency_ms_mean": 137.924,
+   "latency_ms_p50": 138.045,
+   "latency_ms_p95": 138.775,
+   "fps_latency": 29.0,
+   "fps_throughput": 29.0,
+   "fps_throughput_repeats": [
+    29.0,
+    29.0,
+    29.0
+   ],
+   "fps_latency_repeats": [
+    29.0,
+    29.0,
+    29.0
+   ],
+   "peak_mem_mb": 1180,
+   "gpu_before": {
+    "memory.used": "2257",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1710",
+    "power.draw": "44.51"
+   },
+   "gpu_after": {
+    "memory.used": "2257",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1980",
+    "power.draw": "44.45"
+   }
+  },
+  {
+   "variant": "fp16",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 4,
+   "mode": "e2e",
+   "warmup_s": 2.86,
+   "latency_ms_mean": 143.206,
+   "latency_ms_p50": 143.179,
+   "latency_ms_p95": 144.641,
+   "fps_latency": 27.9,
+   "fps_throughput": 27.9,
+   "fps_throughput_repeats": [
+    27.8,
+    27.9,
+    28.0
+   ],
+   "fps_latency_repeats": [
+    27.9,
+    28.0,
+    28.0
+   ],
+   "peak_mem_mb": 1137,
+   "gpu_before": {
+    "memory.used": "2257",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1725",
+    "power.draw": "44.50"
+   },
+   "gpu_after": {
+    "memory.used": "2257",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1770",
+    "power.draw": "44.79"
+   }
+  },
+  {
+   "variant": "fp16",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 8,
+   "mode": "model",
+   "warmup_s": 5.8,
+   "latency_ms_mean": 287.852,
+   "latency_ms_p50": 287.678,
+   "latency_ms_p95": 289.814,
+   "fps_latency": 27.8,
+   "fps_throughput": 27.7,
+   "fps_throughput_repeats": [
+    27.7,
+    27.8,
+    27.7
+   ],
+   "fps_latency_repeats": [
+    27.8,
+    27.8,
+    27.8
+   ],
+   "peak_mem_mb": 2310,
+   "gpu_before": {
+    "memory.used": "4349",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1725",
+    "power.draw": "44.23"
+   },
+   "gpu_after": {
+    "memory.used": "4349",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1665",
+    "power.draw": "44.65"
+   }
+  },
+  {
+   "variant": "fp16",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 8,
+   "mode": "e2e",
+   "warmup_s": 5.97,
+   "latency_ms_mean": 298.392,
+   "latency_ms_p50": 298.399,
+   "latency_ms_p95": 299.62,
+   "fps_latency": 26.8,
+   "fps_throughput": 26.8,
+   "fps_throughput_repeats": [
+    26.8,
+    26.8,
+    26.8
+   ],
+   "fps_latency_repeats": [
+    26.8,
+    26.8,
+    26.8
+   ],
+   "peak_mem_mb": 2221,
+   "gpu_before": {
+    "memory.used": "4349",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1710",
+    "power.draw": "44.73"
+   },
+   "gpu_after": {
+    "memory.used": "4349",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "2055",
+    "power.draw": "45.14"
+   }
+  },
+  {
+   "variant": "fp16",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 16,
+   "mode": "model",
+   "warmup_s": 24.47,
+   "latency_ms_mean": 684.358,
+   "latency_ms_p50": 684.47,
+   "latency_ms_p95": 687.114,
+   "fps_latency": 23.4,
+   "fps_throughput": 23.4,
+   "fps_throughput_repeats": [
+    23.4,
+    23.4,
+    23.4
+   ],
+   "fps_latency_repeats": [
+    23.4,
+    23.4,
+    23.4
+   ],
+   "peak_mem_mb": 3312,
+   "gpu_before": {
+    "memory.used": "4241",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "1845",
+    "power.draw": "44.83"
+   },
+   "gpu_after": {
+    "memory.used": "4241",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1650",
+    "power.draw": "46.18"
+   }
+  },
+  {
+   "variant": "fp16",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": false,
+   "compile": null,
+   "batch_size": 16,
+   "mode": "e2e",
+   "warmup_s": 14.16,
+   "latency_ms_mean": 706.452,
+   "latency_ms_p50": 706.388,
+   "latency_ms_p95": 709.475,
+   "fps_latency": 22.6,
+   "fps_throughput": 22.7,
+   "fps_throughput_repeats": [
+    22.7,
+    22.6,
+    22.7
+   ],
+   "fps_latency_repeats": [
+    22.6,
+    22.7,
+    22.6
+   ],
+   "peak_mem_mb": 3136,
+   "gpu_before": {
+    "memory.used": "4241",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1815",
+    "power.draw": "43.14"
+   },
+   "gpu_after": {
+    "memory.used": "4241",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1995",
+    "power.draw": "44.82"
+   }
+  },
+  {
+   "variant": "fp16_cl",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": null,
+   "batch_size": 1,
+   "mode": "model",
+   "warmup_s": 1.71,
+   "latency_ms_mean": 28.539,
+   "latency_ms_p50": 28.468,
+   "latency_ms_p95": 29.457,
+   "fps_latency": 35.0,
+   "fps_throughput": 39.2,
+   "fps_throughput_repeats": [
+    39.2,
+    39.0,
+    39.4
+   ],
+   "fps_latency_repeats": [
+    34.9,
+    35.0,
+    35.2
+   ],
+   "peak_mem_mb": 257,
+   "gpu_before": {
+    "memory.used": "489",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1845",
+    "power.draw": "37.44"
+   },
+   "gpu_after": {
+    "memory.used": "489",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "2115",
+    "power.draw": "44.88"
+   }
+  },
+  {
+   "variant": "fp16_cl",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": null,
+   "batch_size": 1,
+   "mode": "e2e",
+   "warmup_s": 0.59,
+   "latency_ms_mean": 29.718,
+   "latency_ms_p50": 29.276,
+   "latency_ms_p95": 32.628,
+   "fps_latency": 33.7,
+   "fps_throughput": 33.9,
+   "fps_throughput_repeats": [
+    32.7,
+    34.0,
+    33.9
+   ],
+   "fps_latency_repeats": [
+    32.8,
+    34.0,
+    34.2
+   ],
+   "peak_mem_mb": 247,
+   "gpu_before": {
+    "memory.used": "489",
+    "memory.total": "6141",
+    "utilization.gpu": "83",
+    "temperature.gpu": "61",
+    "clocks.sm": "1920",
+    "power.draw": "44.24"
+   },
+   "gpu_after": {
+    "memory.used": "489",
+    "memory.total": "6141",
+    "utilization.gpu": "82",
+    "temperature.gpu": "60",
+    "clocks.sm": "1935",
+    "power.draw": "44.44"
+   }
+  },
+  {
+   "variant": "fp16_cl",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": null,
+   "batch_size": 2,
+   "mode": "model",
+   "warmup_s": 2.71,
+   "latency_ms_mean": 53.641,
+   "latency_ms_p50": 53.725,
+   "latency_ms_p95": 54.429,
+   "fps_latency": 37.3,
+   "fps_throughput": 37.3,
+   "fps_throughput_repeats": [
+    37.3,
+    37.3,
+    37.3
+   ],
+   "fps_latency_repeats": [
+    37.3,
+    37.3,
+    37.2
+   ],
+   "peak_mem_mb": 461,
+   "gpu_before": {
+    "memory.used": "757",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1710",
+    "power.draw": "44.92"
+   },
+   "gpu_after": {
+    "memory.used": "757",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "1770",
+    "power.draw": "44.62"
+   }
+  },
+  {
+   "variant": "fp16_cl",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": null,
+   "batch_size": 2,
+   "mode": "e2e",
+   "warmup_s": 1.13,
+   "latency_ms_mean": 56.079,
+   "latency_ms_p50": 56.01,
+   "latency_ms_p95": 57.398,
+   "fps_latency": 35.7,
+   "fps_throughput": 35.8,
+   "fps_throughput_repeats": [
+    35.6,
+    35.8,
+    35.8
+   ],
+   "fps_latency_repeats": [
+    35.4,
+    35.8,
+    35.8
+   ],
+   "peak_mem_mb": 438,
+   "gpu_before": {
+    "memory.used": "757",
+    "memory.total": "6141",
+    "utilization.gpu": "73",
+    "temperature.gpu": "60",
+    "clocks.sm": "1815",
+    "power.draw": "45.56"
+   },
+   "gpu_after": {
+    "memory.used": "757",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "2055",
+    "power.draw": "44.77"
+   }
+  },
+  {
+   "variant": "fp16_cl",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": null,
+   "batch_size": 4,
+   "mode": "model",
+   "warmup_s": 2.32,
+   "latency_ms_mean": 115.845,
+   "latency_ms_p50": 115.893,
+   "latency_ms_p95": 117.5,
+   "fps_latency": 34.5,
+   "fps_throughput": 34.7,
+   "fps_throughput_repeats": [
+    34.7,
+    34.7,
+    34.7
+   ],
+   "fps_latency_repeats": [
+    34.4,
+    34.5,
+    34.7
+   ],
+   "peak_mem_mb": 867,
+   "gpu_before": {
+    "memory.used": "1257",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "1785",
+    "power.draw": "43.53"
+   },
+   "gpu_after": {
+    "memory.used": "1257",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "1845",
+    "power.draw": "44.35"
+   }
+  },
+  {
+   "variant": "fp16_cl",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": null,
+   "batch_size": 4,
+   "mode": "e2e",
+   "warmup_s": 2.41,
+   "latency_ms_mean": 120.428,
+   "latency_ms_p50": 120.489,
+   "latency_ms_p95": 122.238,
+   "fps_latency": 33.2,
+   "fps_throughput": 33.3,
+   "fps_throughput_repeats": [
+    33.3,
+    33.1,
+    33.3
+   ],
+   "fps_latency_repeats": [
+    33.2,
+    33.3,
+    33.2
+   ],
+   "peak_mem_mb": 822,
+   "gpu_before": {
+    "memory.used": "1415",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1845",
+    "power.draw": "44.07"
+   },
+   "gpu_after": {
+    "memory.used": "1415",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1755",
+    "power.draw": "44.74"
+   }
+  },
+  {
+   "variant": "fp16_cl",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": null,
+   "batch_size": 8,
+   "mode": "model",
+   "warmup_s": 8.44,
+   "latency_ms_mean": 243.452,
+   "latency_ms_p50": 243.152,
+   "latency_ms_p95": 246.452,
+   "fps_latency": 32.9,
+   "fps_throughput": 33.0,
+   "fps_throughput_repeats": [
+    33.0,
+    33.0,
+    32.7
+   ],
+   "fps_latency_repeats": [
+    32.8,
+    32.9,
+    32.9
+   ],
+   "peak_mem_mb": 1682,
+   "gpu_before": {
+    "memory.used": "2381",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1875",
+    "power.draw": "43.91"
+   },
+   "gpu_after": {
+    "memory.used": "2381",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1695",
+    "power.draw": "44.01"
+   }
+  },
+  {
+   "variant": "fp16_cl",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": null,
+   "batch_size": 8,
+   "mode": "e2e",
+   "warmup_s": 5.1,
+   "latency_ms_mean": 254.442,
+   "latency_ms_p50": 254.463,
+   "latency_ms_p95": 257.301,
+   "fps_latency": 31.4,
+   "fps_throughput": 31.5,
+   "fps_throughput_repeats": [
+    31.5,
+    31.5,
+    31.5
+   ],
+   "fps_latency_repeats": [
+    31.4,
+    31.5,
+    31.4
+   ],
+   "peak_mem_mb": 1594,
+   "gpu_before": {
+    "memory.used": "2381",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "1800",
+    "power.draw": "43.87"
+   },
+   "gpu_after": {
+    "memory.used": "2381",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "2070",
+    "power.draw": "44.23"
+   }
+  },
+  {
+   "variant": "fp16_cl",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": null,
+   "batch_size": 16,
+   "mode": "model",
+   "warmup_s": 16.26,
+   "latency_ms_mean": 503.043,
+   "latency_ms_p50": 502.894,
+   "latency_ms_p95": 508.342,
+   "fps_latency": 31.8,
+   "fps_throughput": 31.8,
+   "fps_throughput_repeats": [
+    31.8,
+    31.8,
+    31.9
+   ],
+   "fps_latency_repeats": [
+    31.8,
+    31.8,
+    31.8
+   ],
+   "peak_mem_mb": 3312,
+   "gpu_before": {
+    "memory.used": "4635",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1725",
+    "power.draw": "44.40"
+   },
+   "gpu_after": {
+    "memory.used": "4635",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "1845",
+    "power.draw": "45.09"
+   }
+  },
+  {
+   "variant": "fp16_cl",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": null,
+   "batch_size": 16,
+   "mode": "e2e",
+   "warmup_s": 10.49,
+   "latency_ms_mean": 524.696,
+   "latency_ms_p50": 524.724,
+   "latency_ms_p95": 528.482,
+   "fps_latency": 30.5,
+   "fps_throughput": 30.5,
+   "fps_throughput_repeats": [
+    30.5,
+    30.5,
+    30.5
+   ],
+   "fps_latency_repeats": [
+    30.5,
+    30.5,
+    30.5
+   ],
+   "peak_mem_mb": 3137,
+   "gpu_before": {
+    "memory.used": "4635",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "1815",
+    "power.draw": "44.47"
+   },
+   "gpu_after": {
+    "memory.used": "4635",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "1755",
+    "power.draw": "44.01"
+   }
+  },
+  {
+   "variant": "bf16_cl",
+   "dtype": "bf16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": null,
+   "batch_size": 1,
+   "mode": "model",
+   "warmup_s": 1.83,
+   "latency_ms_mean": 28.45,
+   "latency_ms_p50": 28.342,
+   "latency_ms_p95": 29.163,
+   "fps_latency": 35.1,
+   "fps_throughput": 38.6,
+   "fps_throughput_repeats": [
+    38.6,
+    38.6,
+    38.7
+   ],
+   "fps_latency_repeats": [
+    35.0,
+    35.2,
+    35.3
+   ],
+   "peak_mem_mb": 257,
+   "gpu_before": {
+    "memory.used": "491",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "1800",
+    "power.draw": "37.47"
+   },
+   "gpu_after": {
+    "memory.used": "491",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "1830",
+    "power.draw": "44.35"
+   }
+  },
+  {
+   "variant": "bf16_cl",
+   "dtype": "bf16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": null,
+   "batch_size": 1,
+   "mode": "e2e",
+   "warmup_s": 0.59,
+   "latency_ms_mean": 29.456,
+   "latency_ms_p50": 29.36,
+   "latency_ms_p95": 30.459,
+   "fps_latency": 33.9,
+   "fps_throughput": 34.3,
+   "fps_throughput_repeats": [
+    34.3,
+    34.3,
+    34.3
+   ],
+   "fps_latency_repeats": [
+    34.1,
+    33.8,
+    34.0
+   ],
+   "peak_mem_mb": 247,
+   "gpu_before": {
+    "memory.used": "491",
+    "memory.total": "6141",
+    "utilization.gpu": "87",
+    "temperature.gpu": "62",
+    "clocks.sm": "2040",
+    "power.draw": "38.98"
+   },
+   "gpu_after": {
+    "memory.used": "491",
+    "memory.total": "6141",
+    "utilization.gpu": "88",
+    "temperature.gpu": "60",
+    "clocks.sm": "2010",
+    "power.draw": "44.23"
+   }
+  },
+  {
+   "variant": "bf16_cl",
+   "dtype": "bf16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": null,
+   "batch_size": 2,
+   "mode": "model",
+   "warmup_s": 2.72,
+   "latency_ms_mean": 54.167,
+   "latency_ms_p50": 54.014,
+   "latency_ms_p95": 54.953,
+   "fps_latency": 36.9,
+   "fps_throughput": 37.0,
+   "fps_throughput_repeats": [
+    37.0,
+    37.0,
+    37.2
+   ],
+   "fps_latency_repeats": [
+    37.0,
+    37.0,
+    36.7
+   ],
+   "peak_mem_mb": 461,
+   "gpu_before": {
+    "memory.used": "759",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "1815",
+    "power.draw": "44.16"
+   },
+   "gpu_after": {
+    "memory.used": "759",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "2055",
+    "power.draw": "44.72"
+   }
+  },
+  {
+   "variant": "bf16_cl",
+   "dtype": "bf16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": null,
+   "batch_size": 2,
+   "mode": "e2e",
+   "warmup_s": 1.12,
+   "latency_ms_mean": 56.502,
+   "latency_ms_p50": 56.427,
+   "latency_ms_p95": 57.607,
+   "fps_latency": 35.4,
+   "fps_throughput": 35.2,
+   "fps_throughput_repeats": [
+    35.0,
+    35.5,
+    35.2
+   ],
+   "fps_latency_repeats": [
+    35.3,
+    35.4,
+    35.4
+   ],
+   "peak_mem_mb": 438,
+   "gpu_before": {
+    "memory.used": "759",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "2100",
+    "power.draw": "44.28"
+   },
+   "gpu_after": {
+    "memory.used": "759",
+    "memory.total": "6141",
+    "utilization.gpu": "99",
+    "temperature.gpu": "59",
+    "clocks.sm": "1725",
+    "power.draw": "42.71"
+   }
+  },
+  {
+   "variant": "bf16_cl",
+   "dtype": "bf16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": null,
+   "batch_size": 4,
+   "mode": "model",
+   "warmup_s": 2.35,
+   "latency_ms_mean": 115.719,
+   "latency_ms_p50": 115.768,
+   "latency_ms_p95": 117.138,
+   "fps_latency": 34.6,
+   "fps_throughput": 34.7,
+   "fps_throughput_repeats": [
+    34.7,
+    34.7,
+    34.6
+   ],
+   "fps_latency_repeats": [
+    34.5,
+    34.6,
+    34.6
+   ],
+   "peak_mem_mb": 867,
+   "gpu_before": {
+    "memory.used": "1259",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "1845",
+    "power.draw": "43.59"
+   },
+   "gpu_after": {
+    "memory.used": "1259",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "1830",
+    "power.draw": "44.30"
+   }
+  },
+  {
+   "variant": "bf16_cl",
+   "dtype": "bf16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": null,
+   "batch_size": 4,
+   "mode": "e2e",
+   "warmup_s": 2.41,
+   "latency_ms_mean": 120.71,
+   "latency_ms_p50": 120.653,
+   "latency_ms_p95": 122.692,
+   "fps_latency": 33.1,
+   "fps_throughput": 33.2,
+   "fps_throughput_repeats": [
+    33.1,
+    33.2,
+    33.2
+   ],
+   "fps_latency_repeats": [
+    33.1,
+    33.2,
+    33.2
+   ],
+   "peak_mem_mb": 822,
+   "gpu_before": {
+    "memory.used": "1417",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1785",
+    "power.draw": "44.67"
+   },
+   "gpu_after": {
+    "memory.used": "1417",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "2070",
+    "power.draw": "44.55"
+   }
+  },
+  {
+   "variant": "bf16_cl",
+   "dtype": "bf16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": null,
+   "batch_size": 8,
+   "mode": "model",
+   "warmup_s": 8.59,
+   "latency_ms_mean": 242.529,
+   "latency_ms_p50": 242.341,
+   "latency_ms_p95": 245.588,
+   "fps_latency": 33.0,
+   "fps_throughput": 32.9,
+   "fps_throughput_repeats": [
+    33.0,
+    32.9,
+    32.9
+   ],
+   "fps_latency_repeats": [
+    33.0,
+    32.9,
+    33.0
+   ],
+   "peak_mem_mb": 1682,
+   "gpu_before": {
+    "memory.used": "2383",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "2085",
+    "power.draw": "44.12"
+   },
+   "gpu_after": {
+    "memory.used": "2383",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "1785",
+    "power.draw": "43.76"
+   }
+  },
+  {
+   "variant": "bf16_cl",
+   "dtype": "bf16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": null,
+   "batch_size": 8,
+   "mode": "e2e",
+   "warmup_s": 5.09,
+   "latency_ms_mean": 253.745,
+   "latency_ms_p50": 253.472,
+   "latency_ms_p95": 256.747,
+   "fps_latency": 31.5,
+   "fps_throughput": 31.6,
+   "fps_throughput_repeats": [
+    31.6,
+    31.6,
+    31.5
+   ],
+   "fps_latency_repeats": [
+    31.5,
+    31.5,
+    31.5
+   ],
+   "peak_mem_mb": 1594,
+   "gpu_before": {
+    "memory.used": "2383",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1755",
+    "power.draw": "43.65"
+   },
+   "gpu_after": {
+    "memory.used": "2383",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "2010",
+    "power.draw": "43.56"
+   }
+  },
+  {
+   "variant": "bf16_cl",
+   "dtype": "bf16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": null,
+   "batch_size": 16,
+   "mode": "model",
+   "warmup_s": 17.0,
+   "latency_ms_mean": 505.265,
+   "latency_ms_p50": 505.397,
+   "latency_ms_p95": 510.754,
+   "fps_latency": 31.7,
+   "fps_throughput": 31.6,
+   "fps_throughput_repeats": [
+    31.7,
+    31.6,
+    31.6
+   ],
+   "fps_latency_repeats": [
+    31.8,
+    31.6,
+    31.6
+   ],
+   "peak_mem_mb": 3312,
+   "gpu_before": {
+    "memory.used": "4637",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "1815",
+    "power.draw": "44.27"
+   },
+   "gpu_after": {
+    "memory.used": "4637",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "1770",
+    "power.draw": "43.84"
+   }
+  },
+  {
+   "variant": "bf16_cl",
+   "dtype": "bf16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": null,
+   "batch_size": 16,
+   "mode": "e2e",
+   "warmup_s": 10.57,
+   "latency_ms_mean": 532.034,
+   "latency_ms_p50": 529.904,
+   "latency_ms_p95": 546.523,
+   "fps_latency": 30.1,
+   "fps_throughput": 30.0,
+   "fps_throughput_repeats": [
+    30.2,
+    30.0,
+    29.5
+   ],
+   "fps_latency_repeats": [
+    30.1,
+    30.2,
+    29.9
+   ],
+   "peak_mem_mb": 3137,
+   "gpu_before": {
+    "memory.used": "4637",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "63",
+    "clocks.sm": "1770",
+    "power.draw": "43.83"
+   },
+   "gpu_after": {
+    "memory.used": "4637",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1755",
+    "power.draw": "41.65"
+   }
+  },
+  {
+   "variant": "fp16_cl_compile",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": "max-autotune-no-cudagraphs",
+   "batch_size": 1,
+   "mode": "model",
+   "warmup_s": 116.44,
+   "latency_ms_mean": 24.38,
+   "latency_ms_p50": 23.602,
+   "latency_ms_p95": 31.135,
+   "fps_latency": 41.0,
+   "fps_throughput": 44.5,
+   "fps_throughput_repeats": [
+    45.2,
+    44.4,
+    44.5
+   ],
+   "fps_latency_repeats": [
+    40.9,
+    40.0,
+    42.2
+   ],
+   "peak_mem_mb": 221,
+   "gpu_before": {
+    "memory.used": "1349",
+    "memory.total": "6141",
+    "utilization.gpu": "11",
+    "temperature.gpu": "57",
+    "clocks.sm": "1470",
+    "power.draw": "29.57"
+   },
+   "gpu_after": {
+    "memory.used": "1349",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "56",
+    "clocks.sm": "1455",
+    "power.draw": "39.24"
+   }
+  },
+  {
+   "variant": "fp16_cl_compile",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": "max-autotune-no-cudagraphs",
+   "batch_size": 1,
+   "mode": "e2e",
+   "warmup_s": 0.52,
+   "latency_ms_mean": 26.477,
+   "latency_ms_p50": 25.373,
+   "latency_ms_p95": 35.39,
+   "fps_latency": 37.8,
+   "fps_throughput": 37.4,
+   "fps_throughput_repeats": [
+    27.7,
+    37.4,
+    39.3
+   ],
+   "fps_latency_repeats": [
+    38.1,
+    37.1,
+    38.1
+   ],
+   "peak_mem_mb": 213,
+   "gpu_before": {
+    "memory.used": "1349",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "58",
+    "clocks.sm": "1620",
+    "power.draw": "32.24"
+   },
+   "gpu_after": {
+    "memory.used": "1349",
+    "memory.total": "6141",
+    "utilization.gpu": "93",
+    "temperature.gpu": "57",
+    "clocks.sm": "1830",
+    "power.draw": "38.02"
+   }
+  },
+  {
+   "variant": "fp16_cl_compile",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": "max-autotune-no-cudagraphs",
+   "batch_size": 2,
+   "mode": "model",
+   "warmup_s": 121.81,
+   "latency_ms_mean": 53.119,
+   "latency_ms_p50": 53.879,
+   "latency_ms_p95": 57.973,
+   "fps_latency": 37.7,
+   "fps_throughput": 37.0,
+   "fps_throughput_repeats": [
+    36.0,
+    37.0,
+    41.6
+   ],
+   "fps_latency_repeats": [
+    37.0,
+    35.8,
+    40.5
+   ],
+   "peak_mem_mb": 383,
+   "gpu_before": {
+    "memory.used": "1353",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "57",
+    "clocks.sm": "1815",
+    "power.draw": "36.19"
+   },
+   "gpu_after": {
+    "memory.used": "1353",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "59",
+    "clocks.sm": "1365",
+    "power.draw": "39.34"
+   }
+  },
+  {
+   "variant": "fp16_cl_compile",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": "max-autotune-no-cudagraphs",
+   "batch_size": 2,
+   "mode": "e2e",
+   "warmup_s": 1.05,
+   "latency_ms_mean": 58.444,
+   "latency_ms_p50": 58.451,
+   "latency_ms_p95": 68.826,
+   "fps_latency": 34.2,
+   "fps_throughput": 33.1,
+   "fps_throughput_repeats": [
+    30.0,
+    33.1,
+    36.3
+   ],
+   "fps_latency_repeats": [
+    35.7,
+    30.2,
+    37.6
+   ],
+   "peak_mem_mb": 369,
+   "gpu_before": {
+    "memory.used": "1353",
+    "memory.total": "6141",
+    "utilization.gpu": "96",
+    "temperature.gpu": "59",
+    "clocks.sm": "1395",
+    "power.draw": "38.83"
+   },
+   "gpu_after": {
+    "memory.used": "1353",
+    "memory.total": "6141",
+    "utilization.gpu": "97",
+    "temperature.gpu": "59",
+    "clocks.sm": "1710",
+    "power.draw": "35.85"
+   }
+  },
+  {
+   "variant": "fp16_cl_compile",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": "max-autotune-no-cudagraphs",
+   "batch_size": 4,
+   "mode": "model",
+   "warmup_s": 2.44,
+   "latency_ms_mean": 110.741,
+   "latency_ms_p50": 103.021,
+   "latency_ms_p95": 131.233,
+   "fps_latency": 36.1,
+   "fps_throughput": 37.1,
+   "fps_throughput_repeats": [
+    37.0,
+    39.3,
+    37.1
+   ],
+   "fps_latency_repeats": [
+    31.3,
+    39.0,
+    39.2
+   ],
+   "peak_mem_mb": 713,
+   "gpu_before": {
+    "memory.used": "1353",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "59",
+    "clocks.sm": "915",
+    "power.draw": "33.17"
+   },
+   "gpu_after": {
+    "memory.used": "1353",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "59",
+    "clocks.sm": "1290",
+    "power.draw": "36.45"
+   }
+  },
+  {
+   "variant": "fp16_cl_compile",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": "max-autotune-no-cudagraphs",
+   "batch_size": 4,
+   "mode": "e2e",
+   "warmup_s": 2.24,
+   "latency_ms_mean": 118.895,
+   "latency_ms_p50": 116.783,
+   "latency_ms_p95": 130.261,
+   "fps_latency": 33.6,
+   "fps_throughput": 34.6,
+   "fps_throughput_repeats": [
+    36.5,
+    34.6,
+    31.8
+   ],
+   "fps_latency_repeats": [
+    31.5,
+    35.5,
+    34.2
+   ],
+   "peak_mem_mb": 669,
+   "gpu_before": {
+    "memory.used": "1353",
+    "memory.total": "6141",
+    "utilization.gpu": "98",
+    "temperature.gpu": "61",
+    "clocks.sm": "1245",
+    "power.draw": "37.97"
+   },
+   "gpu_after": {
+    "memory.used": "1353",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1620",
+    "power.draw": "36.31"
+   }
+  },
+  {
+   "variant": "fp16_cl_compile",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": "max-autotune-no-cudagraphs",
+   "batch_size": 8,
+   "mode": "model",
+   "warmup_s": 165.15,
+   "latency_ms_mean": 318.026,
+   "latency_ms_p50": 332.017,
+   "latency_ms_p95": 393.012,
+   "fps_latency": 25.2,
+   "fps_throughput": 23.5,
+   "fps_throughput_repeats": [
+    22.9,
+    23.5,
+    35.6
+   ],
+   "fps_latency_repeats": [
+    22.6,
+    22.0,
+    34.0
+   ],
+   "peak_mem_mb": 1353,
+   "gpu_before": {
+    "memory.used": "3579",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "975",
+    "power.draw": "34.72"
+   },
+   "gpu_after": {
+    "memory.used": "2697",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1380",
+    "power.draw": "39.81"
+   }
+  },
+  {
+   "variant": "fp16_cl_compile",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": "max-autotune-no-cudagraphs",
+   "batch_size": 8,
+   "mode": "e2e",
+   "warmup_s": 4.99,
+   "latency_ms_mean": 239.404,
+   "latency_ms_p50": 237.181,
+   "latency_ms_p95": 299.874,
+   "fps_latency": 33.4,
+   "fps_throughput": 35.3,
+   "fps_throughput_repeats": [
+    33.2,
+    35.3,
+    35.4
+   ],
+   "fps_latency_repeats": [
+    31.4,
+    34.0,
+    35.1
+   ],
+   "peak_mem_mb": 1263,
+   "gpu_before": {
+    "memory.used": "2697",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1140",
+    "power.draw": "32.93"
+   },
+   "gpu_after": {
+    "memory.used": "2697",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1605",
+    "power.draw": "39.37"
+   }
+  },
+  {
+   "variant": "fp16_cl_compile",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": "max-autotune-no-cudagraphs",
+   "batch_size": 16,
+   "mode": "model",
+   "warmup_s": 141.95,
+   "latency_ms_mean": 489.265,
+   "latency_ms_p50": 486.723,
+   "latency_ms_p95": 515.189,
+   "fps_latency": 32.7,
+   "fps_throughput": 31.4,
+   "fps_throughput_repeats": [
+    31.1,
+    31.4,
+    31.4
+   ],
+   "fps_latency_repeats": [
+    32.6,
+    33.1,
+    32.4
+   ],
+   "peak_mem_mb": 2638,
+   "gpu_before": {
+    "memory.used": "4695",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "59",
+    "clocks.sm": "1665",
+    "power.draw": "31.71"
+   },
+   "gpu_after": {
+    "memory.used": "4695",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "1170",
+    "power.draw": "34.86"
+   }
+  },
+  {
+   "variant": "fp16_cl_compile",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": "max-autotune-no-cudagraphs",
+   "batch_size": 16,
+   "mode": "e2e",
+   "warmup_s": 11.26,
+   "latency_ms_mean": 475.133,
+   "latency_ms_p50": 471.943,
+   "latency_ms_p95": 531.497,
+   "fps_latency": 33.7,
+   "fps_throughput": 34.3,
+   "fps_throughput_repeats": [
+    33.0,
+    34.3,
+    35.0
+   ],
+   "fps_latency_repeats": [
+    31.9,
+    34.0,
+    35.2
+   ],
+   "peak_mem_mb": 2520,
+   "gpu_before": {
+    "memory.used": "4695",
+    "memory.total": "6141",
+    "utilization.gpu": "99",
+    "temperature.gpu": "62",
+    "clocks.sm": "1545",
+    "power.draw": "37.86"
+   },
+   "gpu_after": {
+    "memory.used": "4695",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "1905",
+    "power.draw": "37.56"
+   }
+  },
+  {
+   "variant": "fp16_cl_compile_cg",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": "max-autotune",
+   "batch_size": 1,
+   "mode": "model",
+   "warmup_s": 26.69,
+   "latency_ms_mean": 24.163,
+   "latency_ms_p50": 24.084,
+   "latency_ms_p95": 25.337,
+   "fps_latency": 41.4,
+   "fps_throughput": 42.2,
+   "fps_throughput_repeats": [
+    42.5,
+    42.1,
+    42.2
+   ],
+   "fps_latency_repeats": [
+    41.5,
+    41.4,
+    41.2
+   ],
+   "peak_mem_mb": 66,
+   "gpu_before": {
+    "memory.used": "1443",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "56",
+    "clocks.sm": "1440",
+    "power.draw": "18.67"
+   },
+   "gpu_after": {
+    "memory.used": "1443",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "55",
+    "clocks.sm": "1410",
+    "power.draw": "36.56"
+   }
+  },
+  {
+   "variant": "fp16_cl_compile_cg",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": "max-autotune",
+   "batch_size": 1,
+   "mode": "e2e",
+   "warmup_s": 0.5,
+   "latency_ms_mean": 26.222,
+   "latency_ms_p50": 26.013,
+   "latency_ms_p95": 27.92,
+   "fps_latency": 38.1,
+   "fps_throughput": 38.5,
+   "fps_throughput_repeats": [
+    37.9,
+    38.5,
+    38.5
+   ],
+   "fps_latency_repeats": [
+    38.1,
+    37.9,
+    38.4
+   ],
+   "peak_mem_mb": 76,
+   "gpu_before": {
+    "memory.used": "1443",
+    "memory.total": "6141",
+    "utilization.gpu": "93",
+    "temperature.gpu": "57",
+    "clocks.sm": "1395",
+    "power.draw": "35.66"
+   },
+   "gpu_after": {
+    "memory.used": "1443",
+    "memory.total": "6141",
+    "utilization.gpu": "92",
+    "temperature.gpu": "58",
+    "clocks.sm": "1305",
+    "power.draw": "35.57"
+   }
+  },
+  {
+   "variant": "fp16_cl_compile_cg",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": "max-autotune",
+   "batch_size": 2,
+   "mode": "model",
+   "warmup_s": 28.03,
+   "latency_ms_mean": 51.061,
+   "latency_ms_p50": 50.794,
+   "latency_ms_p95": 56.096,
+   "fps_latency": 39.2,
+   "fps_throughput": 39.4,
+   "fps_throughput_repeats": [
+    36.8,
+    39.4,
+    43.4
+   ],
+   "fps_latency_repeats": [
+    38.8,
+    36.7,
+    42.4
+   ],
+   "peak_mem_mb": 81,
+   "gpu_before": {
+    "memory.used": "1427",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "55",
+    "clocks.sm": "1500",
+    "power.draw": "28.02"
+   },
+   "gpu_after": {
+    "memory.used": "1427",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "58",
+    "clocks.sm": "1425",
+    "power.draw": "40.87"
+   }
+  },
+  {
+   "variant": "fp16_cl_compile_cg",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": "max-autotune",
+   "batch_size": 2,
+   "mode": "e2e",
+   "warmup_s": 0.98,
+   "latency_ms_mean": 52.991,
+   "latency_ms_p50": 52.172,
+   "latency_ms_p95": 58.272,
+   "fps_latency": 37.7,
+   "fps_throughput": 38.6,
+   "fps_throughput_repeats": [
+    34.9,
+    38.6,
+    40.1
+   ],
+   "fps_latency_repeats": [
+    38.2,
+    35.0,
+    40.5
+   ],
+   "peak_mem_mb": 100,
+   "gpu_before": {
+    "memory.used": "1427",
+    "memory.total": "6141",
+    "utilization.gpu": "99",
+    "temperature.gpu": "58",
+    "clocks.sm": "1335",
+    "power.draw": "37.75"
+   },
+   "gpu_after": {
+    "memory.used": "1427",
+    "memory.total": "6141",
+    "utilization.gpu": "94",
+    "temperature.gpu": "58",
+    "clocks.sm": "1890",
+    "power.draw": "39.68"
+   }
+  },
+  {
+   "variant": "fp16_cl_compile_cg",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": "max-autotune",
+   "batch_size": 4,
+   "mode": "model",
+   "warmup_s": 2.1,
+   "latency_ms_mean": 108.715,
+   "latency_ms_p50": 106.624,
+   "latency_ms_p95": 122.044,
+   "fps_latency": 36.8,
+   "fps_throughput": 38.2,
+   "fps_throughput_repeats": [
+    37.2,
+    38.2,
+    39.4
+   ],
+   "fps_latency_repeats": [
+    33.9,
+    39.1,
+    37.8
+   ],
+   "peak_mem_mb": 111,
+   "gpu_before": {
+    "memory.used": "1517",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "58",
+    "clocks.sm": "1095",
+    "power.draw": "38.15"
+   },
+   "gpu_after": {
+    "memory.used": "1517",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "1170",
+    "power.draw": "37.79"
+   }
+  },
+  {
+   "variant": "fp16_cl_compile_cg",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": "max-autotune",
+   "batch_size": 4,
+   "mode": "e2e",
+   "warmup_s": 2.2,
+   "latency_ms_mean": 109.991,
+   "latency_ms_p50": 106.415,
+   "latency_ms_p95": 125.571,
+   "fps_latency": 36.4,
+   "fps_throughput": 37.9,
+   "fps_throughput_repeats": [
+    36.9,
+    37.9,
+    37.9
+   ],
+   "fps_latency_repeats": [
+    33.6,
+    37.9,
+    37.9
+   ],
+   "peak_mem_mb": 151,
+   "gpu_before": {
+    "memory.used": "1517",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "59",
+    "clocks.sm": "1260",
+    "power.draw": "38.38"
+   },
+   "gpu_after": {
+    "memory.used": "1517",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "1410",
+    "power.draw": "39.76"
+   }
+  },
+  {
+   "variant": "fp16_cl_compile_cg",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": "max-autotune",
+   "batch_size": 8,
+   "mode": "model",
+   "warmup_s": 32.02,
+   "latency_ms_mean": 218.185,
+   "latency_ms_p50": 214.478,
+   "latency_ms_p95": 242.386,
+   "fps_latency": 36.7,
+   "fps_throughput": 37.4,
+   "fps_throughput_repeats": [
+    37.4,
+    37.1,
+    37.6
+   ],
+   "fps_latency_repeats": [
+    35.7,
+    36.7,
+    37.6
+   ],
+   "peak_mem_mb": 171,
+   "gpu_before": {
+    "memory.used": "2919",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "58",
+    "clocks.sm": "1215",
+    "power.draw": "36.58"
+   },
+   "gpu_after": {
+    "memory.used": "2919",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1410",
+    "power.draw": "39.43"
+   }
+  },
+  {
+   "variant": "fp16_cl_compile_cg",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": "max-autotune",
+   "batch_size": 8,
+   "mode": "e2e",
+   "warmup_s": 4.68,
+   "latency_ms_mean": 233.015,
+   "latency_ms_p50": 231.131,
+   "latency_ms_p95": 269.472,
+   "fps_latency": 34.3,
+   "fps_throughput": 35.3,
+   "fps_throughput_repeats": [
+    35.6,
+    34.3,
+    35.3
+   ],
+   "fps_latency_repeats": [
+    32.7,
+    35.7,
+    34.7
+   ],
+   "peak_mem_mb": 247,
+   "gpu_before": {
+    "memory.used": "3119",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1170",
+    "power.draw": "34.98"
+   },
+   "gpu_after": {
+    "memory.used": "3119",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "62",
+    "clocks.sm": "1320",
+    "power.draw": "39.63"
+   }
+  },
+  {
+   "variant": "fp16_cl_compile_cg",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": "max-autotune",
+   "batch_size": 16,
+   "mode": "model",
+   "warmup_s": 37.23,
+   "latency_ms_mean": 441.689,
+   "latency_ms_p50": 441.627,
+   "latency_ms_p95": 461.913,
+   "fps_latency": 36.2,
+   "fps_throughput": 36.6,
+   "fps_throughput_repeats": [
+    36.6,
+    37.0,
+    36.4
+   ],
+   "fps_latency_repeats": [
+    36.4,
+    36.2,
+    36.1
+   ],
+   "peak_mem_mb": 286,
+   "gpu_before": {
+    "memory.used": "4973",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "59",
+    "clocks.sm": "1230",
+    "power.draw": "37.51"
+   },
+   "gpu_after": {
+    "memory.used": "4973",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "60",
+    "clocks.sm": "1305",
+    "power.draw": "38.16"
+   }
+  },
+  {
+   "variant": "fp16_cl_compile_cg",
+   "dtype": "fp16",
+   "tf32": false,
+   "channels_last": true,
+   "compile": "max-autotune",
+   "batch_size": 16,
+   "mode": "e2e",
+   "warmup_s": 10.26,
+   "latency_ms_mean": 462.617,
+   "latency_ms_p50": 462.33,
+   "latency_ms_p95": 485.177,
+   "fps_latency": 34.6,
+   "fps_throughput": 34.2,
+   "fps_throughput_repeats": [
+    34.6,
+    34.2,
+    33.3
+   ],
+   "fps_latency_repeats": [
+    34.0,
+    35.6,
+    34.2
+   ],
+   "peak_mem_mb": 444,
+   "gpu_before": {
+    "memory.used": "5709",
+    "memory.total": "6141",
+    "utilization.gpu": "100",
+    "temperature.gpu": "61",
+    "clocks.sm": "1980",
+    "power.draw": "37.44"
+   },
+   "gpu_after": {
+    "memory.used": "5709",
+    "memory.total": "6141",
+    "utilization.gpu": "98",
+    "temperature.gpu": "61",
+    "clocks.sm": "1230",
+    "power.draw": "36.50"
+   }
+  }
+ ],
+ "accuracy": {
+  "fp32": {
+   "knot_pixel_iou_vs_ref": 1.0,
+   "knot_pixels_differing": 0,
+   "class_pixels_differing": 0,
+   "pith_px_diff_mean": 0.0,
+   "pith_px_diff_max": 0.0,
+   "pith_rounded_points_differing": 0,
+   "slices": 299
+  },
+  "tf32": {
+   "knot_pixel_iou_vs_ref": 0.999909,
+   "knot_pixels_differing": 23,
+   "class_pixels_differing": 135,
+   "pith_px_diff_mean": 0.0009,
+   "pith_px_diff_max": 0.017,
+   "pith_rounded_points_differing": 0,
+   "slices": 299
+  },
+  "bf16_autocast": {
+   "knot_pixel_iou_vs_ref": 0.99728,
+   "knot_pixels_differing": 685,
+   "class_pixels_differing": 6870,
+   "pith_px_diff_mean": 0.0211,
+   "pith_px_diff_max": 0.1085,
+   "pith_rounded_points_differing": 16,
+   "slices": 299
+  },
+  "fp16_autocast": {
+   "knot_pixel_iou_vs_ref": 0.999654,
+   "knot_pixels_differing": 87,
+   "class_pixels_differing": 825,
+   "pith_px_diff_mean": 0.0029,
+   "pith_px_diff_max": 0.0255,
+   "pith_rounded_points_differing": 1,
+   "slices": 299
+  },
+  "fp16": {
+   "knot_pixel_iou_vs_ref": 0.999531,
+   "knot_pixels_differing": 118,
+   "class_pixels_differing": 1758,
+   "pith_px_diff_mean": 0.0029,
+   "pith_px_diff_max": 0.0151,
+   "pith_rounded_points_differing": 1,
+   "slices": 299
+  },
+  "fp16_cl": {
+   "knot_pixel_iou_vs_ref": 0.999523,
+   "knot_pixels_differing": 120,
+   "class_pixels_differing": 1768,
+   "pith_px_diff_mean": 0.0029,
+   "pith_px_diff_max": 0.0155,
+   "pith_rounded_points_differing": 1,
+   "slices": 299
+  },
+  "bf16_cl": {
+   "knot_pixel_iou_vs_ref": 0.99695,
+   "knot_pixels_differing": 768,
+   "class_pixels_differing": 5584,
+   "pith_px_diff_mean": 0.0227,
+   "pith_px_diff_max": 0.1037,
+   "pith_rounded_points_differing": 12,
+   "slices": 299
+  },
+  "fp16_cl_compile": {
+   "knot_pixel_iou_vs_ref": 0.999483,
+   "knot_pixels_differing": 130,
+   "class_pixels_differing": 1938,
+   "pith_px_diff_mean": 0.0027,
+   "pith_px_diff_max": 0.023,
+   "pith_rounded_points_differing": 0,
+   "slices": 299
+  },
+  "fp16_cl_compile_cg": {
+   "knot_pixel_iou_vs_ref": 0.999483,
+   "knot_pixels_differing": 130,
+   "class_pixels_differing": 1938,
+   "pith_px_diff_mean": 0.0027,
+   "pith_px_diff_max": 0.023,
+   "pith_rounded_points_differing": 0,
+   "slices": 299
+  }
+ }
+}
