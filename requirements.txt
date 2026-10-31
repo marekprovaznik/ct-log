@@ -11,5 +11,7 @@ plotly
 matplotlib
 pytest
 pillow
+scipy
+threadpoolctl
 
 # kornia
