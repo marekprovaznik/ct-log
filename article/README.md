@@ -85,7 +85,7 @@ Empty: not logged for that model.
 | M3 | 7 Oct | U-Net ResNet-50 | 0.744 | 0.693 | 0.877 | 0.489 | 0.900 | 0.886 | 0.915 | 0.769 | **0.359** |
 | M4 | 9 Oct | Two U-Nets averaged | 0.763 | 0.703 | 0.877 | 0.513 | 0.922 | 0.932 | 0.912 | 0.718 | 0.382 |
 | nnU-Net | 11-12 Oct | nnU-Net v2 2D | **0.768** | 0.720 | 0.898 | **0.534** | 0.911 | | | 0.744 | |
-| **M5** | 12-13 Oct | One U-Net, wide decoder | 0.763 | **0.728** | **0.911** | 0.527 | **0.933** | | | **0.846** | 0.372 |
+| **M5** | 12-13 Oct | One U-Net, wide decoder | 0.763 | **0.728** | **0.911** | 0.527 | **0.933** | | | **0.846** | 0.366 |
 
 Metric keys as logged:
 - `knot_iou`: pixel IoU of the knot class pooled over all slices, inside the wood.
@@ -121,12 +121,13 @@ Tab. 4: M5 pith error on held-out log 10 (293 slices), px between the rounded pr
 
 | Mean | Exact pixel | <= 1 px | <= 2 px | 90th percentile | Max |
 |---:|---:|---:|---:|---:|---:|
-| 0.357 | 69.3 % | 95.6 % | 99.0 % | 1.00 | 7.21 |
+| 0.366 | 68.3 % | 95.6 % | 99.0 % | 1.00 | 8.06 |
 
-Source: [data/pith_m5_log10.json](data/pith_m5_log10.json) from the logged M5 points `pith_wood_dec512.json`
-(`python -m article.pith_gallery`). Tab. 3 gives 0.372 px for the same model from a separate logged evaluation
-(`ens_dec512.json`); the cause of the 0.015 px difference was not established. A local float32 run of the same
-checkpoint gives 0.366 px, 68.3 % exact, 95.6 % within 1 px, max 8.06 px.
+Source: [data/pith_m5_log10.json](data/pith_m5_log10.json), from one float32 run of the M5 checkpoint
+(`python -m scripts.export_model_outputs ... --fp32`, then `python -m article.pith_gallery`). This is the only source
+for M5 pith numbers here and on the meeting page; Tab. 3 uses the same mean. Quote **0.37 px** in the text. Other M5
+pith means in older files (0.357, 0.372, 0.383 px) come from separate evaluation runs whose predicted point differs
+by 1 px on a few slices; do not mix them with this table.
 
 ## Figures
 

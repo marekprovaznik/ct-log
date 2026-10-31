@@ -279,7 +279,7 @@
     "precision": null,
     "recall": null,
     "thin_recall": 0.8462,
-    "pith_mean_px_rounded": 0.372
+    "pith_mean_px_rounded": 0.366
    },
    "sources": {
     "knot_iou": "ens_dec512.json log10.e1_ep48",
@@ -288,7 +288,7 @@
     "map50": "ens_dec512.json log10.e1_ep48",
     "map50_95": "ens_dec512.json log10.e1_ep48",
     "thin_recall": "ens_dec512.json log10.e1_ep48",
-    "pith_mean_px_rounded": "ens_dec512.json log10.e1_ep48"
+    "pith_mean_px_rounded": "pith_m5_log10.json mean_px (float32 run, python -m article.pith_gallery)"
    }
   }
  ]

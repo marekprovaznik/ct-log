@@ -10,8 +10,8 @@ SOURCES = {
     "nnunet.json": "/home/mary/dev/ct-log/report_2026-10/scores/nnunet.json",
     "ensemble_dec512.json": "/home/mary/dev/ct-log/report_2026-10/scores/ensemble_dec512.json",
     "ens_dec512.json": "/home/mary/dev/ct-log/report_2026-10/euler_exports/ensemble_dec512/ens_dec512.json",
-    "pith_wood_dec512.json": "/home/mary/dev/ct-log/report_2026-10/euler_exports/ensemble_dec512/pith_wood_dec512.json",
 }
+PITH_M5 = Path("article/data/pith_m5_log10.json")
 MILESTONES = [
     ("PL1", "May", "MedSAM2 propagation from human anchor frames"),
     ("PL2", "May", "YOLO-OBB detector + MedSAM2, slice by slice"),
@@ -88,9 +88,11 @@ def row(mid: str, when: str, what: str, data: Dict[str, dict]) -> dict:
         sources["mean_per_gt_iou"] = "nnunet.json mean_per_gt_iou_log10.2d"
     if mid == "M5":
         m5 = data["ens_dec512.json"]["log10"]["e1_ep48"]
-        for key in ("knot_iou", "mean_per_gt_iou", "inst_f1_30", "map50", "map50_95", "thin_recall", "pith_mean_px_rounded"):
+        for key in ("knot_iou", "mean_per_gt_iou", "inst_f1_30", "map50", "map50_95", "thin_recall"):
             values[key] = m5[key]
             sources[key] = "ens_dec512.json log10.e1_ep48"
+        values["pith_mean_px_rounded"] = json.loads(PITH_M5.read_text())["mean_px"]
+        sources["pith_mean_px_rounded"] = "pith_m5_log10.json mean_px (float32 run, python -m article.pith_gallery)"
     return {"id": mid, "when": when, "what": what, "values": values, "sources": sources}
 
 

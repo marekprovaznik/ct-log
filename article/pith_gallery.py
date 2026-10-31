@@ -18,8 +18,8 @@ def main() -> None:
     parser.add_argument(
         "--points",
         type=Path,
-        default=Path("/home/mary/dev/ct-log/report_2026-10/euler_exports/ensemble_dec512/pith_wood_dec512.json"),
-        help="Logged M5 points [{path, gt, pred}] (euler); empty string = use --model_root instead.",
+        default=Path(""),
+        help="Optional logged points [{path, gt, pred}] instead of --model_root (default: --model_root).",
     )
     parser.add_argument("--n_random", type=int, default=24)
     parser.add_argument("--stats_out", type=Path, default=Path("article/data/pith_m5_log10.json"))
