@@ -1,0 +1,778 @@
+{
+ "M1": {
+  "note": "original split, kwp-ds-v1; train-human = 61 reviewed frames of logs 2 (34) and 08 (27) at the time; val = human 1, 4 (378193 snapshot); test = log 10 (kwp_ds_v3 GT)",
+  "splits": {
+   "train_human": {
+    "n_frames": 61,
+    "knot_iou": 0.6335,
+    "inst_f1_30": 0.6667,
+    "map50": 0.5079,
+    "map50_95": 0.2352,
+    "thin_recall": 0.1579,
+    "n_thin": 19,
+    "pith_mean_px_rounded": 3.988,
+    "seconds": 4.8
+   },
+   "train_auto": {
+    "n_frames": 300,
+    "knot_iou": 0.6441,
+    "inst_f1_30": 0.6792,
+    "map50": 0.5354,
+    "map50_95": 0.2314,
+    "thin_recall": 0.125,
+    "n_thin": 16,
+    "pith_mean_px_rounded": 4.018,
+    "seconds": 22.3
+   },
+   "val": {
+    "n_frames": 582,
+    "knot_iou": 0.4293,
+    "inst_f1_30": 0.3601,
+    "map50": 0.1677,
+    "map50_95": 0.04,
+    "thin_recall": 0.0087,
+    "n_thin": 345,
+    "pith_mean_px_rounded": 7.976,
+    "seconds": 34.8
+   },
+   "test": {
+    "n_frames": 293,
+    "knot_iou": 0.4162,
+    "inst_f1_30": 0.5211,
+    "map50": 0.2029,
+    "map50_95": 0.0402,
+    "thin_recall": 0.0256,
+    "n_thin": 39,
+    "pith_mean_px_rounded": 5.802,
+    "seconds": 13.5
+   }
+  },
+  "gaps_train_human_minus_test": {
+   "knot_iou": 0.2173,
+   "map50_95": 0.195
+  },
+  "pseudo_label_fit_minus_human_fit_knot_iou": 0.0106,
+  "mlflow_curves": {
+   "run": "kwp-v1-baseline-overnight",
+   "selected_epoch": 23,
+   "last_epoch": 39,
+   "epoch_of_max_val_knot_iou": 26,
+   "train_loss": {
+    "selected": 0.0508,
+    "last": 0.0288,
+    "min": 0.0288
+   },
+   "val_knot_iou": {
+    "selected": 0.4286,
+    "last": 0.4305,
+    "max": 0.4337
+   },
+   "train_eval_knot_iou": {
+    "selected": NaN,
+    "last": 0.7545
+   },
+   "val_knot_iou_curve": {
+    "0": 0.3157,
+    "1": 0.315,
+    "2": 0.3403,
+    "3": 0.3541,
+    "4": 0.3509,
+    "5": 0.3846,
+    "6": 0.3828,
+    "7": 0.3733,
+    "8": 0.3935,
+    "9": 0.4072,
+    "10": 0.3914,
+    "11": 0.4111,
+    "12": 0.3884,
+    "13": 0.4052,
+    "14": 0.3935,
+    "15": 0.4141,
+    "16": 0.4153,
+    "17": 0.4138,
+    "18": 0.4178,
+    "19": 0.4245,
+    "20": 0.4219,
+    "21": 0.4148,
+    "22": 0.4271,
+    "23": 0.4286,
+    "24": 0.4251,
+    "25": 0.4255,
+    "26": 0.4337,
+    "27": 0.4243,
+    "28": 0.432,
+    "29": 0.4254,
+    "30": 0.4288,
+    "31": 0.4295,
+    "32": 0.4279,
+    "33": 0.4256,
+    "34": 0.4294,
+    "35": 0.4323,
+    "36": 0.4292,
+    "37": 0.431,
+    "38": 0.4303,
+    "39": 0.4305
+   }
+  }
+ },
+ "M2": {
+  "note": "teacher split, kwp-ds-v3; train-human = logs 1, 2, 4 + 27 frames of 08; val = test = log 10",
+  "splits": {
+   "train_human": {
+    "n_frames": 899,
+    "knot_iou": 0.7146,
+    "inst_f1_30": 0.8485,
+    "map50": 0.6509,
+    "map50_95": 0.2983,
+    "thin_recall": 0.8033,
+    "n_thin": 544,
+    "pith_mean_px_rounded": 0.793,
+    "seconds": 69.1
+   },
+   "train_auto": {
+    "n_frames": 300,
+    "knot_iou": 0.7318,
+    "inst_f1_30": 0.7384,
+    "map50": 0.5593,
+    "map50_95": 0.2915,
+    "thin_recall": 0.4439,
+    "n_thin": 187,
+    "pith_mean_px_rounded": 1.115,
+    "seconds": 34.0
+   },
+   "val=test": {
+    "n_frames": 293,
+    "knot_iou": 0.6758,
+    "inst_f1_30": 0.8648,
+    "map50": 0.7711,
+    "map50_95": 0.3428,
+    "thin_recall": 0.641,
+    "n_thin": 39,
+    "pith_mean_px_rounded": 0.993,
+    "seconds": 20.6
+   }
+  },
+  "gaps_train_human_minus_test": {
+   "knot_iou": 0.0388,
+   "map50_95": -0.0445
+  },
+  "pseudo_label_fit_minus_human_fit_knot_iou": 0.0172,
+  "mlflow_curves": {
+   "run": "kwp-v3-784-last4-aug-humanw5-ema-pithhm-teachersplit-bf16",
+   "selected_epoch": 11,
+   "last_epoch": 11,
+   "epoch_of_max_val_knot_iou": 11,
+   "train_loss": {
+    "selected": 0.0984,
+    "last": 0.0984,
+    "min": 0.0984
+   },
+   "val_knot_iou": {
+    "selected": 0.6717,
+    "last": 0.6717,
+    "max": 0.6717
+   },
+   "train_eval_knot_iou": {
+    "selected": NaN,
+    "last": 0.7135
+   },
+   "val_knot_iou_curve": {
+    "0": 0.5915,
+    "1": 0.6283,
+    "2": 0.6346,
+    "3": 0.6407,
+    "4": 0.64,
+    "5": 0.6607,
+    "6": 0.6566,
+    "7": 0.6661,
+    "8": 0.6574,
+    "9": 0.6694,
+    "10": 0.67,
+    "11": 0.6717
+   }
+  }
+ },
+ "M3": {
+  "note": "teacher split, kwp-ds-v3; as M2",
+  "splits": {
+   "train_human": {
+    "n_frames": 899,
+    "knot_iou": 0.7621,
+    "inst_f1_30": 0.9004,
+    "map50": 0.7928,
+    "map50_95": 0.4202,
+    "thin_recall": 0.8493,
+    "n_thin": 544,
+    "pith_mean_px_rounded": 0.432,
+    "seconds": 30.5
+   },
+   "train_auto": {
+    "n_frames": 300,
+    "knot_iou": 0.7976,
+    "inst_f1_30": 0.8127,
+    "map50": 0.6909,
+    "map50_95": 0.4507,
+    "thin_recall": 0.5348,
+    "n_thin": 187,
+    "pith_mean_px_rounded": 0.67,
+    "seconds": 10.4
+   },
+   "val=test": {
+    "n_frames": 293,
+    "knot_iou": 0.7444,
+    "inst_f1_30": 0.9005,
+    "map50": 0.8766,
+    "map50_95": 0.4887,
+    "thin_recall": 0.7692,
+    "n_thin": 39,
+    "pith_mean_px_rounded": 0.359,
+    "seconds": 9.6
+   }
+  },
+  "gaps_train_human_minus_test": {
+   "knot_iou": 0.0177,
+   "map50_95": -0.0685
+  },
+  "pseudo_label_fit_minus_human_fit_knot_iou": 0.0355,
+  "mlflow_curves": {
+   "run": "kwp-v3-unet-r50-800-humanw5-ema-teachersplit-dice",
+   "selected_epoch": 11,
+   "last_epoch": 11,
+   "epoch_of_max_val_knot_iou": 10,
+   "train_loss": {
+    "selected": 0.0428,
+    "last": 0.0428,
+    "min": 0.0428
+   },
+   "val_knot_iou": {
+    "selected": 0.7283,
+    "last": 0.7283,
+    "max": 0.7319
+   },
+   "train_eval_knot_iou": {
+    "selected": NaN,
+    "last": 0.7615
+   },
+   "val_knot_iou_curve": {
+    "0": 0.6474,
+    "1": 0.6627,
+    "2": 0.688,
+    "3": 0.6931,
+    "4": 0.7024,
+    "5": 0.6874,
+    "6": 0.7021,
+    "7": 0.7244,
+    "8": 0.7288,
+    "9": 0.7295,
+    "10": 0.7319,
+    "11": 0.7283
+   }
+  }
+ },
+ "M4": {
+  "note": "teacher split, kwp-ds-v4; train-human as M2 (v4 copy, same human labels); val = test = log 10",
+  "splits": {
+   "train_human": {
+    "n_frames": 899,
+    "knot_iou": 0.775,
+    "inst_f1_30": 0.9031,
+    "map50": 0.8223,
+    "map50_95": 0.4465,
+    "thin_recall": 0.8529,
+    "n_thin": 544,
+    "pith_mean_px_rounded": 0.384,
+    "seconds": 65.7
+   },
+   "train_auto": {
+    "n_frames": 300,
+    "knot_iou": 0.8198,
+    "inst_f1_30": 0.9077,
+    "map50": 0.8648,
+    "map50_95": 0.5703,
+    "thin_recall": 0.7754,
+    "n_thin": 138,
+    "pith_mean_px_rounded": 0.262,
+    "seconds": 24.2
+   },
+   "val=test": {
+    "n_frames": 293,
+    "knot_iou": 0.7626,
+    "inst_f1_30": 0.9219,
+    "map50": 0.8771,
+    "map50_95": 0.5131,
+    "thin_recall": 0.7179,
+    "n_thin": 39,
+    "pith_mean_px_rounded": 0.382,
+    "seconds": 21.2
+   }
+  },
+  "gaps_train_human_minus_test": {
+   "knot_iou": 0.0124,
+   "map50_95": -0.0666
+  },
+  "pseudo_label_fit_minus_human_fit_knot_iou": 0.0448,
+  "train_human_per_log": {
+   "log1": {
+    "n_frames": 291,
+    "knot_iou": 0.7615,
+    "inst_f1_30": 0.8796,
+    "map50": 0.7701,
+    "map50_95": 0.4048,
+    "thin_recall": 0.8634,
+    "n_thin": 161,
+    "n_gt_knots": 383,
+    "pith_mean_px_rounded": 0.424,
+    "n_pith": 291
+   },
+   "log2": {
+    "n_frames": 290,
+    "knot_iou": 0.7923,
+    "inst_f1_30": 0.9229,
+    "map50": 0.8632,
+    "map50_95": 0.4956,
+    "thin_recall": 0.8471,
+    "n_thin": 157,
+    "n_gt_knots": 425,
+    "pith_mean_px_rounded": 0.325,
+    "n_pith": 290
+   },
+   "log4": {
+    "n_frames": 291,
+    "knot_iou": 0.7796,
+    "inst_f1_30": 0.9093,
+    "map50": 0.8367,
+    "map50_95": 0.4502,
+    "thin_recall": 0.8505,
+    "n_thin": 214,
+    "n_gt_knots": 419,
+    "pith_mean_px_rounded": 0.402,
+    "n_pith": 291
+   },
+   "log08": {
+    "n_frames": 27,
+    "knot_iou": 0.6393,
+    "inst_f1_30": 0.8493,
+    "map50": 0.7673,
+    "map50_95": 0.2962,
+    "thin_recall": 0.8333,
+    "n_thin": 12,
+    "n_gt_knots": 34,
+    "pith_mean_px_rounded": 0.407,
+    "n_pith": 27
+   },
+   "log10_test": {
+    "n_frames": 293,
+    "knot_iou": 0.7626,
+    "inst_f1_30": 0.9219,
+    "map50": 0.8771,
+    "map50_95": 0.5131,
+    "thin_recall": 0.7179,
+    "n_thin": 39,
+    "n_gt_knots": 272,
+    "pith_mean_px_rounded": 0.382,
+    "n_pith": 293
+   }
+  }
+ },
+ "M4_effv2s": {
+  "note": "M4 member, as M4",
+  "splits": {
+   "train_human": {
+    "n_frames": 899,
+    "knot_iou": 0.7729,
+    "inst_f1_30": 0.8878,
+    "map50": 0.8189,
+    "map50_95": 0.4369,
+    "thin_recall": 0.8456,
+    "n_thin": 544,
+    "pith_mean_px_rounded": 0.391,
+    "seconds": 65.7
+   },
+   "train_auto": {
+    "n_frames": 300,
+    "knot_iou": 0.807,
+    "inst_f1_30": 0.8997,
+    "map50": 0.8513,
+    "map50_95": 0.5392,
+    "thin_recall": 0.7899,
+    "n_thin": 138,
+    "pith_mean_px_rounded": 0.235,
+    "seconds": 24.2
+   },
+   "val=test": {
+    "n_frames": 293,
+    "knot_iou": 0.7539,
+    "inst_f1_30": 0.9081,
+    "map50": 0.8651,
+    "map50_95": 0.4964,
+    "thin_recall": 0.7179,
+    "n_thin": 39,
+    "pith_mean_px_rounded": 0.379,
+    "seconds": 21.2
+   }
+  },
+  "gaps_train_human_minus_test": {
+   "knot_iou": 0.019,
+   "map50_95": -0.0595
+  },
+  "pseudo_label_fit_minus_human_fit_knot_iou": 0.0341,
+  "mlflow_curves": {
+   "run": "kwp-v4-unet-effv2s-w1-dice-ts",
+   "selected_epoch": 11,
+   "last_epoch": 11,
+   "epoch_of_max_val_knot_iou": 10,
+   "train_loss": {
+    "selected": 0.0398,
+    "last": 0.0398,
+    "min": 0.0398
+   },
+   "val_knot_iou": {
+    "selected": 0.7366,
+    "last": 0.7366,
+    "max": 0.7368
+   },
+   "train_eval_knot_iou": {
+    "selected": NaN,
+    "last": 0.7713
+   },
+   "val_knot_iou_curve": {
+    "0": 0.6241,
+    "1": 0.6693,
+    "2": 0.6935,
+    "3": 0.7095,
+    "4": 0.7196,
+    "5": 0.7058,
+    "6": 0.7301,
+    "7": 0.7341,
+    "8": 0.7285,
+    "9": 0.7318,
+    "10": 0.7368,
+    "11": 0.7366
+   }
+  }
+ },
+ "M4_convnext_s": {
+  "note": "M4 member, as M4",
+  "splits": {
+   "train_human": {
+    "n_frames": 899,
+    "knot_iou": 0.7672,
+    "inst_f1_30": 0.9141,
+    "map50": 0.814,
+    "map50_95": 0.4292,
+    "thin_recall": 0.8824,
+    "n_thin": 544,
+    "pith_mean_px_rounded": 0.42,
+    "seconds": 65.7
+   },
+   "train_auto": {
+    "n_frames": 300,
+    "knot_iou": 0.8146,
+    "inst_f1_30": 0.9014,
+    "map50": 0.8591,
+    "map50_95": 0.5589,
+    "thin_recall": 0.7971,
+    "n_thin": 138,
+    "pith_mean_px_rounded": 0.354,
+    "seconds": 24.2
+   },
+   "val=test": {
+    "n_frames": 293,
+    "knot_iou": 0.7525,
+    "inst_f1_30": 0.9248,
+    "map50": 0.8727,
+    "map50_95": 0.4955,
+    "thin_recall": 0.7436,
+    "n_thin": 39,
+    "pith_mean_px_rounded": 0.452,
+    "seconds": 21.2
+   }
+  },
+  "gaps_train_human_minus_test": {
+   "knot_iou": 0.0147,
+   "map50_95": -0.0663
+  },
+  "pseudo_label_fit_minus_human_fit_knot_iou": 0.0474,
+  "mlflow_curves": {
+   "run": "kwp-v4-unet-convnext-small-w1-dice-ts",
+   "selected_epoch": 11,
+   "last_epoch": 11,
+   "epoch_of_max_val_knot_iou": 11,
+   "train_loss": {
+    "selected": 0.04,
+    "last": 0.04,
+    "min": 0.04
+   },
+   "val_knot_iou": {
+    "selected": 0.7355,
+    "last": 0.7355,
+    "max": 0.7355
+   },
+   "train_eval_knot_iou": {
+    "selected": NaN,
+    "last": 0.7718
+   },
+   "val_knot_iou_curve": {
+    "0": 0.6925,
+    "1": 0.6526,
+    "2": 0.6942,
+    "3": 0.7109,
+    "4": 0.7182,
+    "5": 0.7275,
+    "6": 0.7286,
+    "7": 0.7274,
+    "8": 0.7304,
+    "9": 0.7283,
+    "10": 0.7312,
+    "11": 0.7355
+   }
+  }
+ },
+ "ORIG_convnext_s": {
+  "note": "original split, kwp-ds-v3 (run kwp-v3-unet-convnext-small-w1-dice): train-human = log 2 + 27 frames of 08; val = human 1, 4; test = log 10; three disjoint splits",
+  "splits": {
+   "train_human": {
+    "n_frames": 317,
+    "knot_iou": 0.779,
+    "inst_f1_30": 0.9201,
+    "map50": 0.8477,
+    "map50_95": 0.4649,
+    "thin_recall": 0.8935,
+    "n_thin": 169,
+    "pith_mean_px_rounded": 0.358,
+    "seconds": 11.8
+   },
+   "train_auto": {
+    "n_frames": 300,
+    "knot_iou": 0.8208,
+    "inst_f1_30": 0.8273,
+    "map50": 0.7201,
+    "map50_95": 0.4841,
+    "thin_recall": 0.5508,
+    "n_thin": 187,
+    "pith_mean_px_rounded": 0.711,
+    "seconds": 11.6
+   },
+   "val": {
+    "n_frames": 582,
+    "knot_iou": 0.7626,
+    "inst_f1_30": 0.9099,
+    "map50": 0.7875,
+    "map50_95": 0.409,
+    "thin_recall": 0.8587,
+    "n_thin": 375,
+    "pith_mean_px_rounded": 0.486,
+    "seconds": 20.9
+   },
+   "test": {
+    "n_frames": 293,
+    "knot_iou": 0.7517,
+    "inst_f1_30": 0.9042,
+    "map50": 0.881,
+    "map50_95": 0.5037,
+    "thin_recall": 0.7436,
+    "n_thin": 39,
+    "pith_mean_px_rounded": 0.372,
+    "seconds": 10.4
+   }
+  },
+  "gaps_train_human_minus_test": {
+   "knot_iou": 0.0273,
+   "map50_95": -0.0388
+  },
+  "pseudo_label_fit_minus_human_fit_knot_iou": 0.0418,
+  "mlflow_curves": {
+   "run": "kwp-v3-unet-convnext-small-w1-dice",
+   "selected_epoch": 11,
+   "last_epoch": 11,
+   "epoch_of_max_val_knot_iou": 11,
+   "train_loss": {
+    "selected": 0.0379,
+    "last": 0.0379,
+    "min": 0.0379
+   },
+   "val_knot_iou": {
+    "selected": 0.746,
+    "last": 0.746,
+    "max": 0.746
+   },
+   "train_eval_knot_iou": {
+    "selected": NaN,
+    "last": 0.7873
+   },
+   "val_knot_iou_curve": {
+    "0": 0.6723,
+    "1": 0.6556,
+    "2": 0.6834,
+    "3": 0.6859,
+    "4": 0.711,
+    "5": 0.7175,
+    "6": 0.7246,
+    "7": 0.7369,
+    "8": 0.7401,
+    "9": 0.7405,
+    "10": 0.7438,
+    "11": 0.746
+   }
+  }
+ },
+ "_interpretation_segmentation": "U-Nets (M3, M4, members, original-split ConvNeXt-S) neither overfit nor fit their training data well: knot IoU on their own human training frames is only 0.76-0.78, versus 0.75-0.76 on test, a gap of +0.012 to +0.027 (M4 ensemble +0.012). That is a high-bias, low-variance regime, consistent with the seed analysis (B1: ~95% of the error is bias). Capacity is not the limit (an overfit test reached knot IoU 0.975 on a small set); the limits are label inconsistency and the regularisation (augmentation, EMA, 12 epochs). The fit to the pseudo-labels the models trained on is consistently higher than the fit to human labels: +0.035 (M3), +0.045 (M4), +0.042 (original-split ConvNeXt-S). The students imitate their teacher better than they match humans, so the residual error is mostly teacher/human disagreement (outlines, thin knots), which more epochs cannot fix. MLflow curves agree: for every 12-epoch run the selected epoch is the last or within 0.004 of the best val knot IoU; no late decline (no overfitting), and train loss flattens. The mAP50-95 gap is negative (test higher than train-human) because all three human training logs are far richer in thin knots than log 10 (37-51% of GT knots on logs 1, 2, 4 vs 14% on log 10; per-log numbers in M4.train_human_per_log), and thin knots are hardest at strict IoU thresholds; it is not a log-2 effect (log 2 has the best mAP of the three). On thin knots specifically there is a real fit gap: thin recall 0.85-0.86 on the training logs vs 0.72 on test; instance metrics are not comparable across logs with different knot populations, so read the pixel IoU gap. M2 (DINOv3 784): lower everywhere (human 0.715, test 0.676, gap +0.039), so it underfits more (the 49x49 token grid limits outlines). M1 (DINOv3 v1, frozen, 320 px): gap +0.217 (human train 0.633 vs test 0.416); its 61 human training frames came from only two logs, and the val curve plateaus from epoch ~20 while train loss keeps falling (0.051 at the selected epoch 23 -> 0.029 at epoch 39), the only case of overfitting, on top of heavy underfitting. Caveat: on the teacher split val = test = log 10, so the selected epoch saw log 10 (selection effect, small here because the last epoch is selected anyway).",
+ "PL4": {
+  "model": "yolo11n_seg_v5_val10 @640",
+  "trained_on": "human frames of logs 1, 2, 4 (291/290/291) + 27 of 08 = 899; no auto data (no train-auto split)",
+  "splits": {
+   "train_human": {
+    "n_frames": 899,
+    "knot_iou": 0.7754,
+    "inst_f1_30": 0.7996,
+    "map50": 0.7119,
+    "map50_95": 0.3788,
+    "thin_recall": 0.8088,
+    "thin_n": 544,
+    "pith_mean_px_rounded": null
+   },
+   "val": "= test: ultralytics validated and selected best.pt on log 10",
+   "test": {
+    "n_frames": 293,
+    "knot_iou": 0.7453,
+    "inst_f1_30": 0.9094,
+    "map50": 0.8531,
+    "map50_95": 0.4713,
+    "thin_recall": 0.7179,
+    "thin_n": 39,
+    "pith_mean_px_rounded": null
+   }
+  },
+  "gap_train_human_minus_test": {
+   "map50_95": -0.0925,
+   "knot_iou": 0.0301,
+   "map50": -0.1412
+  },
+  "score_source": "max YOLO instance confidence over the component",
+  "ultralytics_curve": {
+   "run": "yolo11n_seg_v5_val10",
+   "epochs": 200,
+   "best_epoch": {
+    "epoch": 154,
+    "val_mask_map50": 0.8955,
+    "val_mask_map50_95": 0.4608,
+    "train_seg_loss": 1.2738,
+    "val_seg_loss": 1.1439
+   },
+   "last_epoch": {
+    "epoch": 200,
+    "val_mask_map50": 0.8924,
+    "val_mask_map50_95": 0.4442,
+    "train_seg_loss": 1.1631,
+    "val_seg_loss": 1.1204
+   },
+   "note": "ultralytics val = log 10 (mask mAP at its own matching: greedy IoU, AP over 0.5:0.95, imgsz-resized masks; not comparable to our instance mAP). Train loss is under heavy augmentation (rot 180, mosaic, flips), so train loss > val loss is expected."
+  }
+ },
+ "PL5": {
+  "model": "yolo11n_seg_v5_val10_800 @800",
+  "trained_on": "human frames of logs 1, 2, 4 (291/290/291) + 27 of 08 = 899; no auto data (no train-auto split)",
+  "splits": {
+   "train_human": {
+    "n_frames": 899,
+    "knot_iou": 0.7763,
+    "inst_f1_30": 0.9009,
+    "map50": 0.8092,
+    "map50_95": 0.425,
+    "thin_recall": 0.864,
+    "thin_n": 544,
+    "pith_mean_px_rounded": 0.642
+   },
+   "val": "= test: ultralytics validated and selected best.pt on log 10",
+   "test": {
+    "n_frames": 293,
+    "knot_iou": 0.7501,
+    "inst_f1_30": 0.9321,
+    "map50": 0.8741,
+    "map50_95": 0.4851,
+    "thin_recall": 0.7949,
+    "thin_n": 39,
+    "pith_mean_px_rounded": 0.443
+   }
+  },
+  "gap_train_human_minus_test": {
+   "map50_95": -0.0601,
+   "knot_iou": 0.0262,
+   "map50": -0.0649
+  },
+  "score_source": "max YOLO instance confidence over the component",
+  "ultralytics_curve": {
+   "run": "yolo11n_seg_v5_val10_800",
+   "epochs": 184,
+   "best_epoch": {
+    "epoch": 134,
+    "val_mask_map50": 0.9231,
+    "val_mask_map50_95": 0.5152,
+    "train_seg_loss": 1.3223,
+    "val_seg_loss": 1.1382
+   },
+   "last_epoch": {
+    "epoch": 184,
+    "val_mask_map50": 0.9214,
+    "val_mask_map50_95": 0.4938,
+    "train_seg_loss": 1.2058,
+    "val_seg_loss": 1.1238
+   },
+   "note": "ultralytics val = log 10 (mask mAP at its own matching: greedy IoU, AP over 0.5:0.95, imgsz-resized masks; not comparable to our instance mAP). Train loss is under heavy augmentation (rot 180, mosaic, flips), so train loss > val loss is expected."
+  }
+ },
+ "_interpretation_yolo": "PL4/PL5 (YOLO teachers, human-only data, 899 frames of logs 1/2/4/08): pixel IoU train-human 0.775/0.776 vs test 0.745/0.750, gap +0.030/+0.026, a small generalisation gap like the U-Nets (+0.012..0.027), no strong overfitting. Instance metrics (F1, mAP) are HIGHER on test than on train-human (PL5 mAP50-95 0.485 test vs 0.425 train), because the human training logs 1, 2 and 4 are far richer in thin knots than log 10 (37-51% of GT knots vs 14%; strict-IoU matching fails on thin knots), a knot-population effect across those logs, not a log-2 effect; instance metrics don't compare across logs with different knot populations, so read the pixel-IoU gap. Ultralytics val curve (val = log 10): best epoch 154/200 (@640) and 134/184 (@800, early-stopped); last-epoch val mask mAP50-95 is 0.016-0.021 below best while train loss keeps falling, i.e. mild late overfitting, which best.pt selection on log 10 avoids (and slightly flatters log-10 numbers).",
+ "M4_per_log_train_human": {
+  "1": {
+   "n": 291,
+   "knot_iou": 0.762,
+   "f1_30": 0.88,
+   "map50": 0.77,
+   "map50_95": 0.405,
+   "gt_knots": 383,
+   "thin": 161,
+   "thin_recall": 0.863
+  },
+  "2": {
+   "n": 290,
+   "knot_iou": 0.792,
+   "f1_30": 0.923,
+   "map50": 0.863,
+   "map50_95": 0.496,
+   "gt_knots": 425,
+   "thin": 157,
+   "thin_recall": 0.847
+  },
+  "4": {
+   "n": 291,
+   "knot_iou": 0.78,
+   "f1_30": 0.909,
+   "map50": 0.837,
+   "map50_95": 0.45,
+   "gt_knots": 419,
+   "thin": 214,
+   "thin_recall": 0.851
+  },
+  "08": {
+   "n": 27,
+   "knot_iou": 0.639,
+   "f1_30": 0.849,
+   "map50": 0.767,
+   "map50_95": 0.296,
+   "gt_knots": 34,
+   "thin": 12,
+   "thin_recall": 0.833
+  },
+  "10_test": {
+   "n": 293,
+   "knot_iou": 0.763,
+   "f1_30": 0.922,
+   "map50": 0.877,
+   "map50_95": 0.513,
+   "gt_knots": 272,
+   "thin": 39,
+   "thin_recall": 0.718
+  },
+  "_source": "Segmentation re-run 2026-10-11, same definitions"
+ }
+}

@@ -1,0 +1,295 @@
+{
+ "log": "10",
+ "keys": [
+  "knot_iou",
+  "mean_per_gt_iou",
+  "map50",
+  "map50_95",
+  "inst_f1_30",
+  "precision",
+  "recall",
+  "thin_recall",
+  "pith_mean_px_rounded"
+ ],
+ "rows": [
+  {
+   "id": "PL1",
+   "when": "May",
+   "what": "MedSAM2 propagation from human anchor frames",
+   "values": {
+    "knot_iou": null,
+    "mean_per_gt_iou": 0.3902,
+    "map50": null,
+    "map50_95": null,
+    "inst_f1_30": 0.7263,
+    "precision": 0.902,
+    "recall": 0.6079,
+    "thin_recall": 0.0625,
+    "pith_mean_px_rounded": null
+   },
+   "sources": {
+    "mean_per_gt_iou": "instance_metrics.json PL1",
+    "inst_f1_30": "instance_metrics.json PL1",
+    "precision": "instance_metrics.json PL1",
+    "recall": "instance_metrics.json PL1",
+    "thin_recall": "instance_metrics.json PL1"
+   }
+  },
+  {
+   "id": "PL2",
+   "when": "May",
+   "what": "YOLO-OBB detector + MedSAM2, slice by slice",
+   "values": {
+    "knot_iou": null,
+    "mean_per_gt_iou": 0.3505,
+    "map50": null,
+    "map50_95": null,
+    "inst_f1_30": 0.7441,
+    "precision": 0.8964,
+    "recall": 0.636,
+    "thin_recall": 0.1026,
+    "pith_mean_px_rounded": null
+   },
+   "sources": {
+    "mean_per_gt_iou": "instance_metrics.json PL2",
+    "inst_f1_30": "instance_metrics.json PL2",
+    "precision": "instance_metrics.json PL2",
+    "recall": "instance_metrics.json PL2",
+    "thin_recall": "instance_metrics.json PL2"
+   }
+  },
+  {
+   "id": "PL3",
+   "when": "Jul-Sep",
+   "what": "Anchor-free OBB propagation",
+   "values": {
+    "knot_iou": null,
+    "mean_per_gt_iou": 0.5031,
+    "map50": null,
+    "map50_95": null,
+    "inst_f1_30": 0.8205,
+    "precision": 0.9796,
+    "recall": 0.7059,
+    "thin_recall": 0.1282,
+    "pith_mean_px_rounded": null
+   },
+   "sources": {
+    "mean_per_gt_iou": "instance_metrics.json PL3",
+    "inst_f1_30": "instance_metrics.json PL3",
+    "precision": "instance_metrics.json PL3",
+    "recall": "instance_metrics.json PL3",
+    "thin_recall": "instance_metrics.json PL3"
+   }
+  },
+  {
+   "id": "M1",
+   "when": "20-25 Sep",
+   "what": "DINOv3 ViT-L, frozen, 320 px",
+   "values": {
+    "knot_iou": 0.4162,
+    "mean_per_gt_iou": 0.2663,
+    "map50": 0.2029,
+    "map50_95": 0.0402,
+    "inst_f1_30": 0.5211,
+    "precision": 0.5201,
+    "recall": 0.5221,
+    "thin_recall": 0.0256,
+    "pith_mean_px_rounded": 5.802
+   },
+   "sources": {
+    "mean_per_gt_iou": "instance_metrics.json M1",
+    "inst_f1_30": "generalisation.json M1.splits.test",
+    "precision": "instance_metrics.json M1",
+    "recall": "instance_metrics.json M1",
+    "thin_recall": "instance_metrics.json M1",
+    "knot_iou": "generalisation.json M1.splits.test",
+    "map50": "generalisation.json M1.splits.test",
+    "map50_95": "generalisation.json M1.splits.test",
+    "pith_mean_px_rounded": "generalisation.json M1.splits.test"
+   }
+  },
+  {
+   "id": "PL4",
+   "when": "30 Sep",
+   "what": "YOLO11n-seg 640 px + snapped OBB pith",
+   "values": {
+    "knot_iou": 0.7453,
+    "mean_per_gt_iou": 0.6899,
+    "map50": 0.8531,
+    "map50_95": 0.4713,
+    "inst_f1_30": 0.9094,
+    "precision": 0.9145,
+    "recall": 0.9044,
+    "thin_recall": 0.7179,
+    "pith_mean_px_rounded": null
+   },
+   "sources": {
+    "mean_per_gt_iou": "instance_metrics.json PL4",
+    "inst_f1_30": "generalisation.json PL4.splits.test",
+    "precision": "instance_metrics.json PL4",
+    "recall": "instance_metrics.json PL4",
+    "thin_recall": "instance_metrics.json PL4",
+    "knot_iou": "generalisation.json PL4.splits.test",
+    "map50": "generalisation.json PL4.splits.test",
+    "map50_95": "generalisation.json PL4.splits.test"
+   }
+  },
+  {
+   "id": "M2",
+   "when": "2-5 Oct",
+   "what": "DINOv3 ViT-L, 784 px, fine-tuned",
+   "values": {
+    "knot_iou": 0.6758,
+    "mean_per_gt_iou": 0.6121,
+    "map50": 0.7711,
+    "map50_95": 0.3428,
+    "inst_f1_30": 0.8648,
+    "precision": 0.8379,
+    "recall": 0.8934,
+    "thin_recall": 0.641,
+    "pith_mean_px_rounded": 0.993
+   },
+   "sources": {
+    "mean_per_gt_iou": "instance_metrics.json M2",
+    "inst_f1_30": "generalisation.json M2.splits.val=test",
+    "precision": "instance_metrics.json M2",
+    "recall": "instance_metrics.json M2",
+    "thin_recall": "instance_metrics.json M2",
+    "knot_iou": "generalisation.json M2.splits.val=test",
+    "map50": "generalisation.json M2.splits.val=test",
+    "map50_95": "generalisation.json M2.splits.val=test",
+    "pith_mean_px_rounded": "generalisation.json M2.splits.val=test"
+   }
+  },
+  {
+   "id": "PL5",
+   "when": "7 Oct",
+   "what": "YOLO11n-seg 800 px + snapped OBB pith",
+   "values": {
+    "knot_iou": 0.7501,
+    "mean_per_gt_iou": 0.7113,
+    "map50": 0.8741,
+    "map50_95": 0.4851,
+    "inst_f1_30": 0.9321,
+    "precision": 0.9304,
+    "recall": 0.9338,
+    "thin_recall": 0.7949,
+    "pith_mean_px_rounded": 0.443
+   },
+   "sources": {
+    "mean_per_gt_iou": "instance_metrics.json PL5",
+    "inst_f1_30": "generalisation.json PL5.splits.test",
+    "precision": "instance_metrics.json PL5",
+    "recall": "instance_metrics.json PL5",
+    "thin_recall": "instance_metrics.json PL5",
+    "knot_iou": "generalisation.json PL5.splits.test",
+    "map50": "generalisation.json PL5.splits.test",
+    "map50_95": "generalisation.json PL5.splits.test",
+    "pith_mean_px_rounded": "generalisation.json PL5.splits.test"
+   }
+  },
+  {
+   "id": "M3",
+   "when": "7 Oct",
+   "what": "U-Net ResNet-50, 800 px",
+   "values": {
+    "knot_iou": 0.7444,
+    "mean_per_gt_iou": 0.6925,
+    "map50": 0.8766,
+    "map50_95": 0.4887,
+    "inst_f1_30": 0.9005,
+    "precision": 0.8861,
+    "recall": 0.9154,
+    "thin_recall": 0.7692,
+    "pith_mean_px_rounded": 0.359
+   },
+   "sources": {
+    "mean_per_gt_iou": "instance_metrics.json M3",
+    "inst_f1_30": "generalisation.json M3.splits.val=test",
+    "precision": "instance_metrics.json M3",
+    "recall": "instance_metrics.json M3",
+    "thin_recall": "instance_metrics.json M3",
+    "knot_iou": "generalisation.json M3.splits.val=test",
+    "map50": "generalisation.json M3.splits.val=test",
+    "map50_95": "generalisation.json M3.splits.val=test",
+    "pith_mean_px_rounded": "generalisation.json M3.splits.val=test"
+   }
+  },
+  {
+   "id": "M4",
+   "when": "9 Oct",
+   "what": "Two U-Nets averaged (EfficientNetV2-S + ConvNeXt-S)",
+   "values": {
+    "knot_iou": 0.7626,
+    "mean_per_gt_iou": 0.7029,
+    "map50": 0.8771,
+    "map50_95": 0.5131,
+    "inst_f1_30": 0.9219,
+    "precision": 0.9323,
+    "recall": 0.9118,
+    "thin_recall": 0.7179,
+    "pith_mean_px_rounded": 0.382
+   },
+   "sources": {
+    "mean_per_gt_iou": "instance_metrics.json M4",
+    "inst_f1_30": "generalisation.json M4.splits.val=test",
+    "precision": "instance_metrics.json M4",
+    "recall": "instance_metrics.json M4",
+    "thin_recall": "instance_metrics.json M4",
+    "knot_iou": "generalisation.json M4.splits.val=test",
+    "map50": "generalisation.json M4.splits.val=test",
+    "map50_95": "generalisation.json M4.splits.val=test",
+    "pith_mean_px_rounded": "generalisation.json M4.splits.val=test"
+   }
+  },
+  {
+   "id": "nnU-Net 2D",
+   "when": "11-12 Oct",
+   "what": "nnU-Net v2 2D, external baseline (no pith output)",
+   "values": {
+    "knot_iou": 0.7679,
+    "mean_per_gt_iou": 0.7197,
+    "map50": 0.8983,
+    "map50_95": 0.5338,
+    "inst_f1_30": 0.9111,
+    "precision": null,
+    "recall": null,
+    "thin_recall": 0.7436,
+    "pith_mean_px_rounded": null
+   },
+   "sources": {
+    "knot_iou": "nnunet.json 2d.10",
+    "inst_f1_30": "nnunet.json 2d.10",
+    "map50": "nnunet.json 2d.10",
+    "map50_95": "nnunet.json 2d.10",
+    "thin_recall": "nnunet.json 2d.10",
+    "mean_per_gt_iou": "nnunet.json mean_per_gt_iou_log10.2d"
+   }
+  },
+  {
+   "id": "M5",
+   "when": "12-13 Oct",
+   "what": "One U-Net, EfficientNetV2-S, wide decoder, 48 epochs (default)",
+   "values": {
+    "knot_iou": 0.7632,
+    "mean_per_gt_iou": 0.7284,
+    "map50": 0.911,
+    "map50_95": 0.5268,
+    "inst_f1_30": 0.9326,
+    "precision": null,
+    "recall": null,
+    "thin_recall": 0.8462,
+    "pith_mean_px_rounded": 0.372
+   },
+   "sources": {
+    "knot_iou": "ens_dec512.json log10.e1_ep48",
+    "mean_per_gt_iou": "ens_dec512.json log10.e1_ep48",
+    "inst_f1_30": "ens_dec512.json log10.e1_ep48",
+    "map50": "ens_dec512.json log10.e1_ep48",
+    "map50_95": "ens_dec512.json log10.e1_ep48",
+    "thin_recall": "ens_dec512.json log10.e1_ep48",
+    "pith_mean_px_rounded": "ens_dec512.json log10.e1_ep48"
+   }
+  }
+ ]
+}

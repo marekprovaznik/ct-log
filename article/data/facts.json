@@ -1,0 +1,210 @@
+{
+ "generated": "2026-10-31",
+ "ct_frames_on_disk": {
+  "source": "/mnt/D/datasets/ct_log/CT",
+  "n_logs": 54,
+  "total_frames": 16171,
+  "min_frames_per_log": 298,
+  "max_frames_per_log": 301,
+  "frames_per_log": {
+   "01": 299,
+   "02": 299,
+   "03": 298,
+   "04": 299,
+   "05": 299,
+   "06": 299,
+   "08": 299,
+   "09": 300,
+   "10": 299,
+   "11": 299,
+   "13": 299,
+   "14": 299,
+   "15": 300,
+   "16": 299,
+   "17": 300,
+   "18": 299,
+   "19": 300,
+   "20": 300,
+   "21": 299,
+   "23": 299,
+   "24": 299,
+   "25": 300,
+   "26": 298,
+   "27": 299,
+   "28": 299,
+   "29": 299,
+   "30": 298,
+   "31": 301,
+   "33": 300,
+   "34": 300,
+   "36": 300,
+   "37": 300,
+   "38": 298,
+   "39": 299,
+   "40": 299,
+   "41": 300,
+   "42": 299,
+   "43": 300,
+   "44": 299,
+   "46": 299,
+   "47": 300,
+   "48": 300,
+   "49": 300,
+   "50": 300,
+   "51": 299,
+   "52": 299,
+   "53": 300,
+   "54": 300,
+   "55": 300,
+   "56": 300,
+   "57": 301,
+   "58": 301,
+   "59": 301,
+   "60": 300
+  }
+ },
+ "phase2_bumaska": {
+  "read_on": "2026-10-31",
+  "project_id": 377328,
+  "project_name": "Phase2",
+  "tag": "bumaska",
+  "n_logs": 9,
+  "total_images": 2654,
+  "total_bumaska": 1867,
+  "total_ct_frames_on_disk": 2691,
+  "logs": {
+   "1": {
+    "images": 292,
+    "bumaska": 291,
+    "ct_frames_on_disk": 299,
+    "m5_role": "train, human frames"
+   },
+   "2": {
+    "images": 292,
+    "bumaska": 290,
+    "ct_frames_on_disk": 299,
+    "m5_role": "train, human frames"
+   },
+   "3": {
+    "images": 294,
+    "bumaska": 292,
+    "ct_frames_on_disk": 298,
+    "m5_role": "train, model pre-labels only"
+   },
+   "4": {
+    "images": 292,
+    "bumaska": 291,
+    "ct_frames_on_disk": 299,
+    "m5_role": "train, human frames"
+   },
+   "05": {
+    "images": 296,
+    "bumaska": 295,
+    "ct_frames_on_disk": 299,
+    "m5_role": "train, model pre-labels only"
+   },
+   "06": {
+    "images": 296,
+    "bumaska": 88,
+    "ct_frames_on_disk": 299,
+    "m5_role": "train, model pre-labels only"
+   },
+   "08": {
+    "images": 298,
+    "bumaska": 27,
+    "ct_frames_on_disk": 299,
+    "m5_role": "train, human frames"
+   },
+   "09": {
+    "images": 300,
+    "bumaska": 0,
+    "ct_frames_on_disk": 300,
+    "m5_role": "train, model pre-labels only"
+   },
+   "10": {
+    "images": 294,
+    "bumaska": 293,
+    "ct_frames_on_disk": 299,
+    "m5_role": "held out (test)"
+   }
+  },
+  "other_datasets_not_counted": {
+   "relabel_irregular_m5_20261016": 194
+  }
+ },
+ "m5_training_set": {
+  "dataset_version": "kwp-ds-v4",
+  "config": "kwp_v4_unet_effv2s_w1_dice_ts_48ep_dec512",
+  "n_train_logs": 53,
+  "train_frames": 15847,
+  "train_human_frames": 899,
+  "train_human_frames_per_log": {
+   "2": 290,
+   "08": 27,
+   "1": 291,
+   "4": 291
+  },
+  "train_auto_frames": 14948,
+  "test_logs": [
+   "10"
+  ],
+  "test_frames": {
+   "10": 293
+  },
+  "train_logs": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "05",
+   "06",
+   "08",
+   "09",
+   "11",
+   "13",
+   "14",
+   "15",
+   "16",
+   "17",
+   "18",
+   "19",
+   "20",
+   "21",
+   "23",
+   "24",
+   "25",
+   "26",
+   "27",
+   "28",
+   "29",
+   "30",
+   "31",
+   "33",
+   "34",
+   "36",
+   "37",
+   "38",
+   "39",
+   "40",
+   "41",
+   "42",
+   "43",
+   "44",
+   "46",
+   "47",
+   "48",
+   "49",
+   "50",
+   "51",
+   "52",
+   "53",
+   "54",
+   "55",
+   "56",
+   "57",
+   "58",
+   "59",
+   "60"
+  ]
+ }
+}

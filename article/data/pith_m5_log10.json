@@ -1,0 +1,14 @@
+{
+ "log": "10",
+ "model": "M5",
+ "source": "/home/mary/dev/ct-log/report_2026-10/euler_exports/ensemble_dec512/pith_wood_dec512.json",
+ "n_slices": 293,
+ "mean_px": 0.357,
+ "exact_pct": 69.3,
+ "le_1px_pct": 95.6,
+ "le_2px_pct": 99.0,
+ "p90_px": 1.0,
+ "max_px": 7.21,
+ "n_over_1px": 13,
+ "error": "Euclidean distance between the rounded predicted pixel and the human click"
+}

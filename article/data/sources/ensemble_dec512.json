@@ -1,0 +1,712 @@
+{
+ "setup": {
+  "ensemble_dec512": "probability average (mean knot softmax >= 0.5, wood-clipped to argmax != bg), no TTA, pith = mean of the two soft-argmax points rounded: E1 = kwp-v4-unet-effv2s-w1-dice-ts-48ep-dec512 epoch 48 EMA + kwp-v4-unet-convnext-small-w1-dice-ts-24ep-dec512 epoch 24 EMA (final)",
+  "convnext_dec512_run": "M4 ConvNeXt-S member recipe (same data, loss, Adam lr 1e-4, EMA 0.9995, aug, batch 6), num_epochs 24 (cosine T_max 24), unet_decoder_channels 512-256-128-64-32, EMA checkpoints every 4 epochs; config commit 39bbffa, code fc6aa08; MLflow run 135fe25a777a47d6927e9e6a4b49a374; 0.325 s/iter, own GPU peak 13,040 MiB at batch 6 (gate counted own memory; 1,950 MiB foreign usage on the card), 6.8 h incl. per-epoch evals",
+  "M4": "kwp-v4 EffV2-S + ConvNeXt-S, 12 epochs, default decoder, same averaging; rescored through the same script (log-10 knot IoU 0.7626, identical per slice to nnunet/scores/m4_log10.json)",
+  "nnunet_2d": "Dataset801 2d, no TTA (nnunet.json); train_124 and pith not computed for it",
+  "scoring": "scripts/eval_generalisation.py (src/eval/knot_instances.py, native 778); log10 = kwp_ds_v3/10 (293 slices); log1/2/4 = human frames of kwp_ds_v4; mean_per_gt_iou = mean over GT knots of the matched IoU (0 if unmatched at IoU 0.3); pith/wood on log 10 from scripts/eval_ensemble_pith_wood.py"
+ },
+ "rows": {
+  "ensemble_dec512": {
+   "log10": {
+    "n_frames": 293,
+    "knot_iou": 0.7669,
+    "inst_f1_30": 0.922,
+    "mean_per_gt_iou": 0.7244,
+    "map50": 0.8951,
+    "map50_95": 0.5302,
+    "thin_recall": 0.7692,
+    "n_thin": 39,
+    "thin_map50": 0.6799,
+    "thin_map50_95": 0.2184,
+    "thick_map50": 0.9269,
+    "thick_map50_95": 0.5772,
+    "pith_mean_px_rounded": 0.356
+   },
+   "log1": {
+    "n_frames": 291,
+    "knot_iou": 0.783,
+    "inst_f1_30": 0.9124,
+    "mean_per_gt_iou": 0.668,
+    "map50": 0.8365,
+    "map50_95": 0.444,
+    "thin_recall": 0.8758,
+    "n_thin": 161,
+    "thin_map50": 0.6859,
+    "thin_map50_95": 0.1919,
+    "thick_map50": 0.9363,
+    "thick_map50_95": 0.6127,
+    "pith_mean_px_rounded": 0.43
+   },
+   "log2": {
+    "n_frames": 290,
+    "knot_iou": 0.8053,
+    "inst_f1_30": 0.921,
+    "mean_per_gt_iou": 0.7207,
+    "map50": 0.8598,
+    "map50_95": 0.525,
+    "thin_recall": 0.8854,
+    "n_thin": 157,
+    "thin_map50": 0.6097,
+    "thin_map50_95": 0.1983,
+    "thick_map50": 0.9697,
+    "thick_map50_95": 0.6886,
+    "pith_mean_px_rounded": 0.318
+   },
+   "log4": {
+    "n_frames": 291,
+    "knot_iou": 0.7868,
+    "inst_f1_30": 0.8918,
+    "mean_per_gt_iou": 0.6777,
+    "map50": 0.8452,
+    "map50_95": 0.4713,
+    "thin_recall": 0.8692,
+    "n_thin": 214,
+    "thin_map50": 0.7751,
+    "thin_map50_95": 0.2966,
+    "thick_map50": 0.9197,
+    "thick_map50_95": 0.63,
+    "pith_mean_px_rounded": 0.393
+   },
+   "train_124": {
+    "n_frames": 872,
+    "knot_iou": 0.7914,
+    "inst_f1_30": 0.9084,
+    "mean_per_gt_iou": 0.6896,
+    "map50": 0.849,
+    "map50_95": 0.4813,
+    "thin_recall": 0.8759,
+    "n_thin": 532,
+    "thin_map50": 0.6932,
+    "thin_map50_95": 0.2296,
+    "thick_map50": 0.9484,
+    "thick_map50_95": 0.6463,
+    "pith_mean_px_rounded": 0.38
+   }
+  },
+  "E1_effv2s_dec512_ep48": {
+   "log10": {
+    "n_frames": 293,
+    "knot_iou": 0.7632,
+    "inst_f1_30": 0.9326,
+    "mean_per_gt_iou": 0.7284,
+    "map50": 0.911,
+    "map50_95": 0.5268,
+    "thin_recall": 0.8462,
+    "n_thin": 39,
+    "thin_map50": 0.7761,
+    "thin_map50_95": 0.2677,
+    "thick_map50": 0.9345,
+    "thick_map50_95": 0.5664,
+    "pith_mean_px_rounded": 0.372
+   },
+   "log1": {
+    "n_frames": 291,
+    "knot_iou": 0.7878,
+    "inst_f1_30": 0.9123,
+    "mean_per_gt_iou": 0.6782,
+    "map50": 0.8292,
+    "map50_95": 0.4461,
+    "thin_recall": 0.882,
+    "n_thin": 161,
+    "thin_map50": 0.6885,
+    "thin_map50_95": 0.1966,
+    "thick_map50": 0.9321,
+    "thick_map50_95": 0.6079,
+    "pith_mean_px_rounded": 0.413
+   },
+   "log2": {
+    "n_frames": 290,
+    "knot_iou": 0.807,
+    "inst_f1_30": 0.9252,
+    "mean_per_gt_iou": 0.7319,
+    "map50": 0.878,
+    "map50_95": 0.5256,
+    "thin_recall": 0.9108,
+    "n_thin": 157,
+    "thin_map50": 0.6373,
+    "thin_map50_95": 0.2021,
+    "thick_map50": 0.9797,
+    "thick_map50_95": 0.6859,
+    "pith_mean_px_rounded": 0.335
+   },
+   "log4": {
+    "n_frames": 291,
+    "knot_iou": 0.7895,
+    "inst_f1_30": 0.9145,
+    "mean_per_gt_iou": 0.6879,
+    "map50": 0.8499,
+    "map50_95": 0.4762,
+    "thin_recall": 0.8832,
+    "n_thin": 214,
+    "thin_map50": 0.7777,
+    "thin_map50_95": 0.3079,
+    "thick_map50": 0.9286,
+    "thick_map50_95": 0.6268,
+    "pith_mean_px_rounded": 0.391
+   },
+   "train_124": {
+    "n_frames": 872,
+    "knot_iou": 0.7947,
+    "inst_f1_30": 0.9176,
+    "mean_per_gt_iou": 0.7001,
+    "map50": 0.8546,
+    "map50_95": 0.483,
+    "thin_recall": 0.891,
+    "n_thin": 532,
+    "thin_map50": 0.7048,
+    "thin_map50_95": 0.2342,
+    "thick_map50": 0.9476,
+    "thick_map50_95": 0.6432,
+    "pith_mean_px_rounded": 0.38
+   }
+  },
+  "convnext_s_dec512_ep24": {
+   "log10": {
+    "n_frames": 293,
+    "knot_iou": 0.7573,
+    "inst_f1_30": 0.9097,
+    "mean_per_gt_iou": 0.7155,
+    "map50": 0.8903,
+    "map50_95": 0.5183,
+    "thin_recall": 0.7436,
+    "n_thin": 39,
+    "thin_map50": 0.6754,
+    "thin_map50_95": 0.2233,
+    "thick_map50": 0.9331,
+    "thick_map50_95": 0.5637,
+    "pith_mean_px_rounded": 0.373
+   },
+   "log1": {
+    "n_frames": 291,
+    "knot_iou": 0.7693,
+    "inst_f1_30": 0.8929,
+    "mean_per_gt_iou": 0.6478,
+    "map50": 0.7896,
+    "map50_95": 0.409,
+    "thin_recall": 0.8696,
+    "n_thin": 161,
+    "thin_map50": 0.5768,
+    "thin_map50_95": 0.1622,
+    "thick_map50": 0.9244,
+    "thick_map50_95": 0.5751,
+    "pith_mean_px_rounded": 0.431
+   },
+   "log2": {
+    "n_frames": 290,
+    "knot_iou": 0.7906,
+    "inst_f1_30": 0.9272,
+    "mean_per_gt_iou": 0.7047,
+    "map50": 0.8455,
+    "map50_95": 0.4915,
+    "thin_recall": 0.8917,
+    "n_thin": 157,
+    "thin_map50": 0.576,
+    "thin_map50_95": 0.1644,
+    "thick_map50": 0.9588,
+    "thick_map50_95": 0.6506,
+    "pith_mean_px_rounded": 0.317
+   },
+   "log4": {
+    "n_frames": 291,
+    "knot_iou": 0.771,
+    "inst_f1_30": 0.8961,
+    "mean_per_gt_iou": 0.6562,
+    "map50": 0.8379,
+    "map50_95": 0.4405,
+    "thin_recall": 0.8598,
+    "n_thin": 214,
+    "thin_map50": 0.7498,
+    "thin_map50_95": 0.2539,
+    "thick_map50": 0.91,
+    "thick_map50_95": 0.6028,
+    "pith_mean_px_rounded": 0.401
+   },
+   "train_124": {
+    "n_frames": 872,
+    "knot_iou": 0.7768,
+    "inst_f1_30": 0.9059,
+    "mean_per_gt_iou": 0.6704,
+    "map50": 0.8235,
+    "map50_95": 0.4475,
+    "thin_recall": 0.8722,
+    "n_thin": 532,
+    "thin_map50": 0.6359,
+    "thin_map50_95": 0.1929,
+    "thick_map50": 0.9284,
+    "thick_map50_95": 0.6116,
+    "pith_mean_px_rounded": 0.383
+   }
+  },
+  "M4": {
+   "log10": {
+    "n_frames": 293,
+    "knot_iou": 0.7626,
+    "inst_f1_30": 0.9219,
+    "mean_per_gt_iou": 0.7029,
+    "map50": 0.8771,
+    "map50_95": 0.5131,
+    "thin_recall": 0.7179,
+    "n_thin": 39,
+    "thin_map50": 0.6541,
+    "thin_map50_95": 0.2267,
+    "thick_map50": 0.9085,
+    "thick_map50_95": 0.5572,
+    "pith_mean_px_rounded": 0.382
+   },
+   "log1": {
+    "n_frames": 291,
+    "knot_iou": 0.7615,
+    "inst_f1_30": 0.8796,
+    "mean_per_gt_iou": 0.6229,
+    "map50": 0.7701,
+    "map50_95": 0.4048,
+    "thin_recall": 0.8634,
+    "n_thin": 161,
+    "thin_map50": 0.6214,
+    "thin_map50_95": 0.1637,
+    "thick_map50": 0.8589,
+    "thick_map50_95": 0.5623,
+    "pith_mean_px_rounded": 0.424
+   },
+   "log2": {
+    "n_frames": 290,
+    "knot_iou": 0.7923,
+    "inst_f1_30": 0.9229,
+    "mean_per_gt_iou": 0.6977,
+    "map50": 0.8632,
+    "map50_95": 0.4956,
+    "thin_recall": 0.8471,
+    "n_thin": 157,
+    "thin_map50": 0.6348,
+    "thin_map50_95": 0.189,
+    "thick_map50": 0.97,
+    "thick_map50_95": 0.6551,
+    "pith_mean_px_rounded": 0.325
+   },
+   "log4": {
+    "n_frames": 291,
+    "knot_iou": 0.7796,
+    "inst_f1_30": 0.9093,
+    "mean_per_gt_iou": 0.6584,
+    "map50": 0.8367,
+    "map50_95": 0.4502,
+    "thin_recall": 0.8505,
+    "n_thin": 214,
+    "thin_map50": 0.7692,
+    "thin_map50_95": 0.2752,
+    "thick_map50": 0.9002,
+    "thick_map50_95": 0.607,
+    "pith_mean_px_rounded": 0.402
+   },
+   "train_124": {
+    "n_frames": 872,
+    "knot_iou": 0.7769,
+    "inst_f1_30": 0.9048,
+    "mean_per_gt_iou": 0.6609,
+    "map50": 0.8229,
+    "map50_95": 0.4503,
+    "thin_recall": 0.8534,
+    "n_thin": 532,
+    "thin_map50": 0.6831,
+    "thin_map50_95": 0.2096,
+    "thick_map50": 0.91,
+    "thick_map50_95": 0.6087,
+    "pith_mean_px_rounded": 0.384
+   }
+  },
+  "M4_effv2s": {
+   "log10": {
+    "n_frames": 293,
+    "knot_iou": 0.7539,
+    "inst_f1_30": 0.9081,
+    "mean_per_gt_iou": 0.6931,
+    "map50": 0.8651,
+    "map50_95": 0.4964,
+    "thin_recall": 0.7179,
+    "n_thin": 39,
+    "thin_map50": 0.63,
+    "thin_map50_95": 0.2245,
+    "thick_map50": 0.9067,
+    "thick_map50_95": 0.5398,
+    "pith_mean_px_rounded": 0.379
+   },
+   "log1": {
+    "n_frames": 291,
+    "knot_iou": 0.7646,
+    "inst_f1_30": 0.8611,
+    "mean_per_gt_iou": 0.629,
+    "map50": 0.7885,
+    "map50_95": 0.4016,
+    "thin_recall": 0.8634,
+    "n_thin": 161,
+    "thin_map50": 0.6565,
+    "thin_map50_95": 0.1533,
+    "thick_map50": 0.8779,
+    "thick_map50_95": 0.561,
+    "pith_mean_px_rounded": 0.42
+   },
+   "log2": {
+    "n_frames": 290,
+    "knot_iou": 0.7879,
+    "inst_f1_30": 0.9101,
+    "mean_per_gt_iou": 0.6922,
+    "map50": 0.8391,
+    "map50_95": 0.4782,
+    "thin_recall": 0.8408,
+    "n_thin": 157,
+    "thin_map50": 0.5959,
+    "thin_map50_95": 0.1676,
+    "thick_map50": 0.9664,
+    "thick_map50_95": 0.6365,
+    "pith_mean_px_rounded": 0.329
+   },
+   "log4": {
+    "n_frames": 291,
+    "knot_iou": 0.7729,
+    "inst_f1_30": 0.8921,
+    "mean_per_gt_iou": 0.6506,
+    "map50": 0.8348,
+    "map50_95": 0.4406,
+    "thin_recall": 0.8364,
+    "n_thin": 214,
+    "thin_map50": 0.7575,
+    "thin_map50_95": 0.2754,
+    "thick_map50": 0.9008,
+    "thick_map50_95": 0.5907,
+    "pith_mean_px_rounded": 0.425
+   },
+   "train_124": {
+    "n_frames": 872,
+    "knot_iou": 0.7747,
+    "inst_f1_30": 0.8885,
+    "mean_per_gt_iou": 0.6582,
+    "map50": 0.8193,
+    "map50_95": 0.4403,
+    "thin_recall": 0.8459,
+    "n_thin": 532,
+    "thin_map50": 0.67,
+    "thin_map50_95": 0.1968,
+    "thick_map50": 0.9182,
+    "thick_map50_95": 0.5991,
+    "pith_mean_px_rounded": 0.391
+   }
+  },
+  "M4_convnext_s": {
+   "log10": {
+    "n_frames": 293,
+    "knot_iou": 0.7525,
+    "inst_f1_30": 0.9248,
+    "mean_per_gt_iou": 0.7027,
+    "map50": 0.8727,
+    "map50_95": 0.4955,
+    "thin_recall": 0.7436,
+    "n_thin": 39,
+    "thin_map50": 0.6261,
+    "thin_map50_95": 0.2351,
+    "thick_map50": 0.9152,
+    "thick_map50_95": 0.539,
+    "pith_mean_px_rounded": 0.452
+   },
+   "log1": {
+    "n_frames": 291,
+    "knot_iou": 0.754,
+    "inst_f1_30": 0.8965,
+    "mean_per_gt_iou": 0.6245,
+    "map50": 0.7519,
+    "map50_95": 0.3888,
+    "thin_recall": 0.8571,
+    "n_thin": 161,
+    "thin_map50": 0.5462,
+    "thin_map50_95": 0.1445,
+    "thick_map50": 0.8765,
+    "thick_map50_95": 0.551,
+    "pith_mean_px_rounded": 0.454
+   },
+   "log2": {
+    "n_frames": 290,
+    "knot_iou": 0.7833,
+    "inst_f1_30": 0.9318,
+    "mean_per_gt_iou": 0.6989,
+    "map50": 0.8547,
+    "map50_95": 0.4754,
+    "thin_recall": 0.8917,
+    "n_thin": 157,
+    "thin_map50": 0.6154,
+    "thin_map50_95": 0.1639,
+    "thick_map50": 0.9661,
+    "thick_map50_95": 0.6297,
+    "pith_mean_px_rounded": 0.389
+   },
+   "log4": {
+    "n_frames": 291,
+    "knot_iou": 0.7731,
+    "inst_f1_30": 0.9178,
+    "mean_per_gt_iou": 0.6669,
+    "map50": 0.85,
+    "map50_95": 0.4373,
+    "thin_recall": 0.8972,
+    "n_thin": 214,
+    "thin_map50": 0.7827,
+    "thin_map50_95": 0.2623,
+    "thick_map50": 0.9097,
+    "thick_map50_95": 0.5935,
+    "pith_mean_px_rounded": 0.423
+   },
+   "train_124": {
+    "n_frames": 872,
+    "knot_iou": 0.7691,
+    "inst_f1_30": 0.9161,
+    "mean_per_gt_iou": 0.6647,
+    "map50": 0.8148,
+    "map50_95": 0.4329,
+    "thin_recall": 0.8835,
+    "n_thin": 532,
+    "thin_map50": 0.6586,
+    "thin_map50_95": 0.1919,
+    "thick_map50": 0.9174,
+    "thick_map50_95": 0.593,
+    "pith_mean_px_rounded": 0.422
+   }
+  },
+  "nnunet_2d": {
+   "log10": {
+    "n_frames": 293,
+    "knot_iou": 0.7679,
+    "inst_f1_30": 0.9111,
+    "mean_per_gt_iou": 0.7197,
+    "map50": 0.8983,
+    "map50_95": 0.5338,
+    "thin_recall": 0.7436,
+    "n_thin": 39,
+    "thin_map50": 0.6993,
+    "thin_map50_95": 0.2373,
+    "thick_map50": 0.9295,
+    "thick_map50_95": 0.5804
+   },
+   "log1": {
+    "n_frames": 291,
+    "knot_iou": 0.872,
+    "inst_f1_30": 0.9434,
+    "mean_per_gt_iou": 0.7615,
+    "map50": 0.9166,
+    "map50_95": 0.5978,
+    "thin_recall": 0.9193,
+    "n_thin": 161,
+    "thin_map50": 0.8167,
+    "thin_map50_95": 0.3189,
+    "thick_map50": 0.9797,
+    "thick_map50_95": 0.7705
+   },
+   "log2": {
+    "n_frames": 290,
+    "knot_iou": 0.8809,
+    "inst_f1_30": 0.973,
+    "mean_per_gt_iou": 0.7993,
+    "map50": 0.9386,
+    "map50_95": 0.6568,
+    "thin_recall": 0.9363,
+    "n_thin": 157,
+    "thin_map50": 0.8348,
+    "thin_map50_95": 0.3408,
+    "thick_map50": 1.0,
+    "thick_map50_95": 0.8195
+   },
+   "log4": {
+    "n_frames": 291,
+    "knot_iou": 0.8576,
+    "inst_f1_30": 0.9598,
+    "mean_per_gt_iou": 0.7665,
+    "map50": 0.9388,
+    "map50_95": 0.5942,
+    "thin_recall": 0.9486,
+    "n_thin": 214,
+    "thin_map50": 0.8934,
+    "thin_map50_95": 0.3962,
+    "thick_map50": 0.9901,
+    "thick_map50_95": 0.7757
+   }
+  }
+ },
+ "pith_wood_log10": {
+  "dec512_e1_ep48": {
+   "pith_exact": "67%",
+   "pith_le1px": "95%",
+   "pith_le2px": "99%",
+   "pith_mean_px": 0.38,
+   "wood_iou": 0.9865
+  },
+  "dec512_cnx_ep24": {
+   "pith_exact": "68%",
+   "pith_le1px": "95%",
+   "pith_le2px": "99%",
+   "pith_mean_px": 0.38,
+   "wood_iou": 0.9839
+  },
+  "dec512_ensemble": {
+   "pith_exact": "69%",
+   "pith_le1px": "96%",
+   "pith_le2px": "99%",
+   "pith_mean_px": 0.36,
+   "wood_iou": 0.9859
+  },
+  "m4_m4_effv2s": {
+   "pith_exact": "68%",
+   "pith_le1px": "94%",
+   "pith_le2px": "99%",
+   "pith_mean_px": 0.38,
+   "wood_iou": 0.9856
+  },
+  "m4_m4_convnext_s": {
+   "pith_exact": "62%",
+   "pith_le1px": "94%",
+   "pith_le2px": "98%",
+   "pith_mean_px": 0.44,
+   "wood_iou": 0.9866
+  },
+  "m4_ensemble": {
+   "pith_exact": "67%",
+   "pith_le1px": "95%",
+   "pith_le2px": "99%",
+   "pith_mean_px": 0.38,
+   "wood_iou": 0.9866
+  }
+ },
+ "bootstrap_log10_knot_iou": {
+  "method": "paired 20-slice block bootstrap, 2000 resamples, seed 0 (same as nnunet.json)",
+  "ensemble_dec512 - M4": {
+   "diff": 0.0043,
+   "ci95": [
+    -0.0034,
+    0.0119
+   ]
+  },
+  "ensemble_dec512 - nnU-Net 2D": {
+   "diff": -0.001,
+   "ci95": [
+    -0.0085,
+    0.0063
+   ]
+  },
+  "ensemble_dec512 - E1 ep48": {
+   "diff": 0.0037,
+   "ci95": [
+    0.0001,
+    0.0078
+   ]
+  },
+  "ensemble_dec512 - nnU-Net 3d_zmax": {
+   "diff": 0.0026,
+   "ci95": [
+    -0.0091,
+    0.0142
+   ]
+  },
+  "ConvNeXt dec512 24ep - M4 ConvNeXt member": {
+   "diff": 0.0048,
+   "ci95": [
+    -0.0072,
+    0.0174
+   ]
+  }
+ },
+ "convnext_dec512_curve_by_epoch": {
+  "4": {
+   "train_124": {
+    "knot_iou": 0.6938,
+    "mean_per_gt_iou": 0.5685,
+    "map50": 0.7018,
+    "map50_95": 0.323,
+    "thin_recall": 0.7444
+   },
+   "log10": {
+    "knot_iou": 0.6928,
+    "mean_per_gt_iou": 0.6294,
+    "map50": 0.7901,
+    "map50_95": 0.3867,
+    "thin_recall": 0.6923
+   }
+  },
+  "8": {
+   "train_124": {
+    "knot_iou": 0.7475,
+    "mean_per_gt_iou": 0.6224,
+    "map50": 0.7582,
+    "map50_95": 0.3959,
+    "thin_recall": 0.812
+   },
+   "log10": {
+    "knot_iou": 0.7445,
+    "mean_per_gt_iou": 0.6866,
+    "map50": 0.8642,
+    "map50_95": 0.4809,
+    "thin_recall": 0.6923
+   }
+  },
+  "12": {
+   "train_124": {
+    "knot_iou": 0.7617,
+    "mean_per_gt_iou": 0.6406,
+    "map50": 0.7981,
+    "map50_95": 0.4274,
+    "thin_recall": 0.8233
+   },
+   "log10": {
+    "knot_iou": 0.7588,
+    "mean_per_gt_iou": 0.6958,
+    "map50": 0.8684,
+    "map50_95": 0.4966,
+    "thin_recall": 0.6667
+   }
+  },
+  "16": {
+   "train_124": {
+    "knot_iou": 0.7724,
+    "mean_per_gt_iou": 0.6629,
+    "map50": 0.8162,
+    "map50_95": 0.4402,
+    "thin_recall": 0.8722
+   },
+   "log10": {
+    "knot_iou": 0.7594,
+    "mean_per_gt_iou": 0.7063,
+    "map50": 0.874,
+    "map50_95": 0.5135,
+    "thin_recall": 0.7436
+   }
+  },
+  "20": {
+   "train_124": {
+    "knot_iou": 0.775,
+    "mean_per_gt_iou": 0.6707,
+    "map50": 0.8237,
+    "map50_95": 0.4439,
+    "thin_recall": 0.8853
+   },
+   "log10": {
+    "knot_iou": 0.7591,
+    "mean_per_gt_iou": 0.7225,
+    "map50": 0.9116,
+    "map50_95": 0.524,
+    "thin_recall": 0.7949
+   }
+  },
+  "24": {
+   "train_124": {
+    "knot_iou": 0.7768,
+    "mean_per_gt_iou": 0.6704,
+    "map50": 0.8235,
+    "map50_95": 0.4475,
+    "thin_recall": 0.8722
+   },
+   "log10": {
+    "knot_iou": 0.7573,
+    "mean_per_gt_iou": 0.7155,
+    "map50": 0.8903,
+    "map50_95": 0.5183,
+    "thin_recall": 0.7436
+   }
+  }
+ },
+ "_interpretation": "The dec512 ensemble reaches log-10 knot IoU 0.767, +0.004 [-0.003, +0.012] over M4 and level with nnU-Net 2D (-0.001 [-0.009, +0.006]); mAP50-95 0.530 (M4 0.513, nnU-Net 2D 0.534), mean_per_gt_iou 0.724 (M4 0.703, nnU-Net 2D 0.720), pith 69 % exact / 96 % <= 1 px / 0.36 px (M4 67 / 95 / 0.38). Every gain is inside the bootstrap noise except over E1 alone (+0.004 [+0.000, +0.008]). The ConvNeXt run is the weaker member (log 10 0.757, train_124 0.777) and plateaus on log 10 from epoch 12 (0.759, 0.759, 0.759, 0.757); E1 alone is already at 0.763. Fit on the human training logs stays at ~0.79 (nnU-Net 2D 0.86-0.88): longer training and a wider decoder bring the U-Net level with nnU-Net on log 10 without closing the training-fit gap."
+}

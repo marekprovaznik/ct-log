@@ -209,6 +209,7 @@ thirdparty/*/data/
 *.png
 *.jpg
 *.jpeg
+!article/figures/**/*.png
 
 # Claude Code session archive (kept locally, synced via .claude-history/sync.sh)
 .claude-history/

@@ -1,0 +1,380 @@
+[
+ {
+  "file": "iou_0.1_thin_1.png",
+  "file_box": "iou_0.1_thin_1_box.png",
+  "bin": "0.1",
+  "log": "1",
+  "page": "page_274.tiff",
+  "iou": 0.066,
+  "index_iou": 0.06,
+  "within_tolerance": true,
+  "thin": true,
+  "width_px": 3.0,
+  "gt_area": 183,
+  "bbox_xyxy": [
+   329,
+   580,
+   383,
+   635
+  ],
+  "source": "meeting page gallery",
+  "caption": "Fig. X: Training log 1, slice 274. M5 knot prediction vs. human annotation, full 778 x 778 px slice; per-knot IoU 0.07 for the thin knot (3.0 px wide) marked by the white rectangle in the _box variant. Yellow: overlap; magenta: M5 only; cyan: human only. Training log 1 was used to train M5: this image illustrates the metric, not a test result."
+ },
+ {
+  "file": "iou_0.1_thin_2.png",
+  "file_box": "iou_0.1_thin_2_box.png",
+  "bin": "0.1",
+  "log": "1",
+  "page": "page_072.tiff",
+  "iou": 0.08,
+  "index_iou": 0.076,
+  "within_tolerance": true,
+  "thin": true,
+  "width_px": 7.4,
+  "gt_area": 289,
+  "bbox_xyxy": [
+   360,
+   543,
+   402,
+   567
+  ],
+  "source": "meeting page gallery",
+  "caption": "Fig. X: Training log 1, slice 72. M5 knot prediction vs. human annotation, full 778 x 778 px slice; per-knot IoU 0.08 for the thin knot (7.4 px wide) marked by the white rectangle in the _box variant. Yellow: overlap; magenta: M5 only; cyan: human only. Training log 1 was used to train M5: this image illustrates the metric, not a test result."
+ },
+ {
+  "file": "iou_0.1_thin_3.png",
+  "file_box": "iou_0.1_thin_3_box.png",
+  "bin": "0.1",
+  "log": "2",
+  "page": "page_013.tiff",
+  "iou": 0.103,
+  "index_iou": 0.135,
+  "within_tolerance": false,
+  "thin": true,
+  "width_px": 4.8,
+  "gt_area": 184,
+  "bbox_xyxy": [
+   421,
+   583,
+   465,
+   605
+  ],
+  "source": "meeting page gallery",
+  "caption": "Fig. X: Training log 2, slice 13. M5 knot prediction vs. human annotation, full 778 x 778 px slice; per-knot IoU 0.10 for the thin knot (4.8 px wide) marked by the white rectangle in the _box variant. Yellow: overlap; magenta: M5 only; cyan: human only. Training log 2 was used to train M5: this image illustrates the metric, not a test result."
+ },
+ {
+  "file": "iou_0.1_thin_4.png",
+  "file_box": "iou_0.1_thin_4_box.png",
+  "bin": "0.1",
+  "log": "4",
+  "page": "page_204.tiff",
+  "iou": 0.127,
+  "index_iou": 0.127,
+  "within_tolerance": true,
+  "thin": true,
+  "width_px": 4.5,
+  "gt_area": 79,
+  "bbox_xyxy": [
+   385,
+   549,
+   398,
+   567
+  ],
+  "source": "meeting page gallery",
+  "caption": "Fig. X: Training log 4, slice 204. M5 knot prediction vs. human annotation, full 778 x 778 px slice; per-knot IoU 0.13 for the thin knot (4.5 px wide) marked by the white rectangle in the _box variant. Yellow: overlap; magenta: M5 only; cyan: human only. Training log 4 was used to train M5: this image illustrates the metric, not a test result."
+ },
+ {
+  "file": "iou_0.3_thick_1.png",
+  "file_box": "iou_0.3_thick_1_box.png",
+  "bin": "0.3",
+  "log": "1",
+  "page": "page_278.tiff",
+  "iou": 0.287,
+  "index_iou": 0.287,
+  "within_tolerance": true,
+  "thin": false,
+  "width_px": 9.6,
+  "gt_area": 86,
+  "bbox_xyxy": [
+   406,
+   566,
+   415,
+   577
+  ],
+  "source": "meeting page gallery",
+  "caption": "Fig. X: Training log 1, slice 278. M5 knot prediction vs. human annotation, full 778 x 778 px slice; per-knot IoU 0.29 for the thick knot (9.6 px wide) marked by the white rectangle in the _box variant. Yellow: overlap; magenta: M5 only; cyan: human only. Training log 1 was used to train M5: this image illustrates the metric, not a test result."
+ },
+ {
+  "file": "iou_0.3_thick_2.png",
+  "file_box": "iou_0.3_thick_2_box.png",
+  "bin": "0.3",
+  "log": "1",
+  "page": "page_259.tiff",
+  "iou": 0.226,
+  "index_iou": 0.266,
+  "within_tolerance": false,
+  "thin": false,
+  "width_px": 24.5,
+  "gt_area": 530,
+  "bbox_xyxy": [
+   447,
+   410,
+   477,
+   436
+  ],
+  "source": "meeting page gallery",
+  "caption": "Fig. X: Training log 1, slice 259. M5 knot prediction vs. human annotation, full 778 x 778 px slice; per-knot IoU 0.23 for the thick knot (24.5 px wide) marked by the white rectangle in the _box variant. Yellow: overlap; magenta: M5 only; cyan: human only. Training log 1 was used to train M5: this image illustrates the metric, not a test result."
+ },
+ {
+  "file": "iou_0.3_thin_1.png",
+  "file_box": "iou_0.3_thin_1_box.png",
+  "bin": "0.3",
+  "log": "1",
+  "page": "page_050.tiff",
+  "iou": 0.289,
+  "index_iou": 0.289,
+  "within_tolerance": true,
+  "thin": true,
+  "width_px": 3.4,
+  "gt_area": 103,
+  "bbox_xyxy": [
+   433,
+   598,
+   466,
+   624
+  ],
+  "source": "meeting page gallery",
+  "caption": "Fig. X: Training log 1, slice 50. M5 knot prediction vs. human annotation, full 778 x 778 px slice; per-knot IoU 0.29 for the thin knot (3.4 px wide) marked by the white rectangle in the _box variant. Yellow: overlap; magenta: M5 only; cyan: human only. Training log 1 was used to train M5: this image illustrates the metric, not a test result."
+ },
+ {
+  "file": "iou_0.3_thin_2.png",
+  "file_box": "iou_0.3_thin_2_box.png",
+  "bin": "0.3",
+  "log": "1",
+  "page": "page_266.tiff",
+  "iou": 0.312,
+  "index_iou": 0.312,
+  "within_tolerance": true,
+  "thin": true,
+  "width_px": 4.4,
+  "gt_area": 279,
+  "bbox_xyxy": [
+   411,
+   406,
+   428,
+   490
+  ],
+  "source": "meeting page gallery",
+  "caption": "Fig. X: Training log 1, slice 266. M5 knot prediction vs. human annotation, full 778 x 778 px slice; per-knot IoU 0.31 for the thin knot (4.4 px wide) marked by the white rectangle in the _box variant. Yellow: overlap; magenta: M5 only; cyan: human only. Training log 1 was used to train M5: this image illustrates the metric, not a test result."
+ },
+ {
+  "file": "iou_0.3_thin_3.png",
+  "file_box": "iou_0.3_thin_3_box.png",
+  "bin": "0.3",
+  "log": "1",
+  "page": "page_199.tiff",
+  "iou": 0.33,
+  "index_iou": 0.329,
+  "within_tolerance": true,
+  "thin": true,
+  "width_px": 5.9,
+  "gt_area": 451,
+  "bbox_xyxy": [
+   452,
+   549,
+   553,
+   556
+  ],
+  "source": "meeting page gallery",
+  "caption": "Fig. X: Training log 1, slice 199. M5 knot prediction vs. human annotation, full 778 x 778 px slice; per-knot IoU 0.33 for the thin knot (5.9 px wide) marked by the white rectangle in the _box variant. Yellow: overlap; magenta: M5 only; cyan: human only. Training log 1 was used to train M5: this image illustrates the metric, not a test result."
+ },
+ {
+  "file": "iou_0.3_thin_4.png",
+  "file_box": "iou_0.3_thin_4_box.png",
+  "bin": "0.3",
+  "log": "1",
+  "page": "page_072.tiff",
+  "iou": 0.329,
+  "index_iou": 0.324,
+  "within_tolerance": true,
+  "thin": true,
+  "width_px": 7.5,
+  "gt_area": 219,
+  "bbox_xyxy": [
+   405,
+   527,
+   418,
+   560
+  ],
+  "source": "meeting page gallery",
+  "caption": "Fig. X: Training log 1, slice 72. M5 knot prediction vs. human annotation, full 778 x 778 px slice; per-knot IoU 0.33 for the thin knot (7.5 px wide) marked by the white rectangle in the _box variant. Yellow: overlap; magenta: M5 only; cyan: human only. Training log 1 was used to train M5: this image illustrates the metric, not a test result."
+ },
+ {
+  "file": "iou_0.5_thick_2.png",
+  "file_box": "iou_0.5_thick_2_box.png",
+  "bin": "0.5",
+  "log": "1",
+  "page": "page_087.tiff",
+  "iou": 0.512,
+  "index_iou": 0.511,
+  "within_tolerance": true,
+  "thin": false,
+  "width_px": 11.8,
+  "gt_area": 940,
+  "bbox_xyxy": [
+   393,
+   575,
+   411,
+   674
+  ],
+  "source": "meeting page gallery",
+  "caption": "Fig. X: Training log 1, slice 87. M5 knot prediction vs. human annotation, full 778 x 778 px slice; per-knot IoU 0.51 for the thick knot (11.8 px wide) marked by the white rectangle in the _box variant. Yellow: overlap; magenta: M5 only; cyan: human only. Training log 1 was used to train M5: this image illustrates the metric, not a test result."
+ },
+ {
+  "file": "iou_0.5_thin_2.png",
+  "file_box": "iou_0.5_thin_2_box.png",
+  "bin": "0.5",
+  "log": "1",
+  "page": "page_200.tiff",
+  "iou": 0.485,
+  "index_iou": 0.487,
+  "within_tolerance": true,
+  "thin": true,
+  "width_px": 4.3,
+  "gt_area": 371,
+  "bbox_xyxy": [
+   292,
+   556,
+   400,
+   609
+  ],
+  "source": "meeting page gallery",
+  "caption": "Fig. X: Training log 1, slice 200. M5 knot prediction vs. human annotation, full 778 x 778 px slice; per-knot IoU 0.48 for the thin knot (4.3 px wide) marked by the white rectangle in the _box variant. Yellow: overlap; magenta: M5 only; cyan: human only. Training log 1 was used to train M5: this image illustrates the metric, not a test result."
+ },
+ {
+  "file": "iou_0.5_thin_3.png",
+  "file_box": "iou_0.5_thin_3_box.png",
+  "bin": "0.5",
+  "log": "1",
+  "page": "page_154.tiff",
+  "iou": 0.526,
+  "index_iou": 0.519,
+  "within_tolerance": true,
+  "thin": true,
+  "width_px": 3.4,
+  "gt_area": 107,
+  "bbox_xyxy": [
+   356,
+   569,
+   400,
+   575
+  ],
+  "source": "meeting page gallery",
+  "caption": "Fig. X: Training log 1, slice 154. M5 knot prediction vs. human annotation, full 778 x 778 px slice; per-knot IoU 0.53 for the thin knot (3.4 px wide) marked by the white rectangle in the _box variant. Yellow: overlap; magenta: M5 only; cyan: human only. Training log 1 was used to train M5: this image illustrates the metric, not a test result."
+ },
+ {
+  "file": "iou_0.5_thin_4.png",
+  "file_box": "iou_0.5_thin_4_box.png",
+  "bin": "0.5",
+  "log": "1",
+  "page": "page_179.tiff",
+  "iou": 0.52,
+  "index_iou": 0.52,
+  "within_tolerance": true,
+  "thin": true,
+  "width_px": 4.5,
+  "gt_area": 222,
+  "bbox_xyxy": [
+   407,
+   563,
+   412,
+   621
+  ],
+  "source": "meeting page gallery",
+  "caption": "Fig. X: Training log 1, slice 179. M5 knot prediction vs. human annotation, full 778 x 778 px slice; per-knot IoU 0.52 for the thin knot (4.5 px wide) marked by the white rectangle in the _box variant. Yellow: overlap; magenta: M5 only; cyan: human only. Training log 1 was used to train M5: this image illustrates the metric, not a test result."
+ },
+ {
+  "file": "iou_0.9_thin_1.png",
+  "file_box": "iou_0.9_thin_1_box.png",
+  "bin": "0.9",
+  "log": "1",
+  "page": "page_188.tiff",
+  "iou": 0.863,
+  "index_iou": 0.863,
+  "within_tolerance": true,
+  "thin": true,
+  "width_px": 7.4,
+  "gt_area": 977,
+  "bbox_xyxy": [
+   261,
+   482,
+   405,
+   552
+  ],
+  "source": "meeting page gallery",
+  "caption": "Fig. X: Training log 1, slice 188. M5 knot prediction vs. human annotation, full 778 x 778 px slice; per-knot IoU 0.86 for the thin knot (7.4 px wide) marked by the white rectangle in the _box variant. Yellow: overlap; magenta: M5 only; cyan: human only. Training log 1 was used to train M5: this image illustrates the metric, not a test result."
+ },
+ {
+  "file": "iou_0.9_thin_2.png",
+  "file_box": "iou_0.9_thin_2_box.png",
+  "bin": "0.9",
+  "log": "4",
+  "page": "page_256.tiff",
+  "iou": 0.891,
+  "index_iou": 0.891,
+  "within_tolerance": true,
+  "thin": true,
+  "width_px": 6.8,
+  "gt_area": 229,
+  "bbox_xyxy": [
+   390,
+   570,
+   430,
+   577
+  ],
+  "source": "meeting page gallery",
+  "caption": "Fig. X: Training log 4, slice 256. M5 knot prediction vs. human annotation, full 778 x 778 px slice; per-knot IoU 0.89 for the thin knot (6.8 px wide) marked by the white rectangle in the _box variant. Yellow: overlap; magenta: M5 only; cyan: human only. Training log 4 was used to train M5: this image illustrates the metric, not a test result."
+ },
+ {
+  "file": "iou_0.9_thin_3.png",
+  "file_box": "iou_0.9_thin_3_box.png",
+  "bin": "0.9",
+  "log": "4",
+  "page": "page_181.tiff",
+  "iou": 0.869,
+  "index_iou": 0.869,
+  "within_tolerance": true,
+  "thin": true,
+  "width_px": 6.1,
+  "gt_area": 162,
+  "bbox_xyxy": [
+   350,
+   539,
+   375,
+   564
+  ],
+  "source": "meeting page gallery",
+  "caption": "Fig. X: Training log 4, slice 181. M5 knot prediction vs. human annotation, full 778 x 778 px slice; per-knot IoU 0.87 for the thin knot (6.1 px wide) marked by the white rectangle in the _box variant. Yellow: overlap; magenta: M5 only; cyan: human only. Training log 4 was used to train M5: this image illustrates the metric, not a test result."
+ },
+ {
+  "file": "iou_0.9_thin_4.png",
+  "file_box": "iou_0.9_thin_4_box.png",
+  "bin": "0.9",
+  "log": "4",
+  "page": "page_169.tiff",
+  "iou": 0.885,
+  "index_iou": 0.898,
+  "within_tolerance": false,
+  "thin": true,
+  "width_px": 5.5,
+  "gt_area": 115,
+  "bbox_xyxy": [
+   360,
+   583,
+   380,
+   600
+  ],
+  "source": "meeting page gallery",
+  "caption": "Fig. X: Training log 4, slice 169. M5 knot prediction vs. human annotation, full 778 x 778 px slice; per-knot IoU 0.88 for the thin knot (5.5 px wide) marked by the white rectangle in the _box variant. Yellow: overlap; magenta: M5 only; cyan: human only. Training log 4 was used to train M5: this image illustrates the metric, not a test result."
+ }
+]

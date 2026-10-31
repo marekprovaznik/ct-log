@@ -28,6 +28,7 @@ def main() -> None:
     parser.add_argument("--out_root", type=Path, required=True)
     parser.add_argument("--batch_size", type=int, default=2)
     parser.add_argument("--device", default="cuda")
+    parser.add_argument("--fp32", action="store_true", help="Disable the config's bf16 autocast and run in float32.")
     args = parser.parse_args()
 
     device = torch.device(args.device)
@@ -35,6 +36,10 @@ def main() -> None:
     if member["pith_head"] is None:
         msg = "Model %s has no pith output" % args.checkpoint
         raise ValueError(msg)
+    if args.fp32:
+        member["config"].backbone_bf16 = False
+        if hasattr(member["seg_head"], "bf16"):
+            member["seg_head"].bf16 = False
     args.out_root.mkdir(parents=True, exist_ok=True)
     counts: Dict[str, int] = {}
     for log in args.logs:
@@ -49,6 +54,7 @@ def main() -> None:
         "checkpoint": str(args.checkpoint),
         "checkpoint_sha256": sha256(args.checkpoint),
         "tta": "none",
+        "precision": "fp32" if args.fp32 else ("bf16 autocast" if member["config"].backbone_bf16 else "fp32"),
         "input": "3-slice stack [z-1, z, z+1] clamped at the ends, native 778 -> model resolution bilinear, ImageNet normalisation",
         "outputs": {
             "<log>/page_XXX.cls.png": "uint8 argmax of the 3-class softmax at native 778 (0 background, 1 wood, 2 knot)",
