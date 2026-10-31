@@ -44,6 +44,7 @@ def main() -> None:
     parser.add_argument("--max_seam_px", type=float, default=3.0)
     parser.add_argument("--max_reject_seam_px", type=float, default=5.0)
     parser.add_argument("--no_height_correction", action="store_true")
+    parser.add_argument("--no_distortion", action="store_true", help="do not estimate radial lens distortion")
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--skip_existing", action="store_true")
     parser.add_argument("--index_only", action="store_true")

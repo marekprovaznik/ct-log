@@ -1,9 +1,10 @@
 import dataclasses
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
 
+from camera_slider.registration import Distortion, undistort_maps, undistort_points
 from camera_slider.wood import segment_board
 
 
@@ -29,8 +30,9 @@ def render_face(
     load: Callable[[str], np.ndarray],
     px_per_unit: float,
     tile_width: int = 8192,
+    distortion: Optional[Distortion] = None,
 ) -> FaceRender:
-    footprints = np.concatenate([_footprint(t, s) for _, t, s in frames])
+    footprints = np.concatenate([_footprint(t, s, distortion) for _, t, s in frames])
     origin = footprints.min(0)
     width, height = np.ceil((footprints.max(0) - origin) * px_per_unit).astype(int) + 1
     to_canvas = np.array(
@@ -39,7 +41,7 @@ def render_face(
     placed = []
     for name, transform, shape in frames:
         mapping = to_canvas @ transform
-        corners = _footprint(mapping, shape)
+        corners = _footprint(mapping, shape, distortion)
         lo = np.clip(np.floor(corners.min(0)).astype(int), 0, [width, height])
         hi = np.clip(np.ceil(corners.max(0)).astype(int) + 1, 0, [width, height])
         placed.append((name, mapping, shape, lo, hi))
@@ -47,6 +49,7 @@ def render_face(
     coverage = np.zeros((height, width), bool)
     cache: Dict[str, np.ndarray] = {}
     feathers: Dict[Tuple[int, int], np.ndarray] = {}
+    maps: Dict[Tuple[int, int], Tuple[np.ndarray, np.ndarray]] = {}
     for tx0 in range(0, width, tile_width):
         tx1 = min(width, tx0 + tile_width)
         acc = np.zeros((height, tx1 - tx0, 3), np.float32)
@@ -54,10 +57,12 @@ def render_face(
         active = [p for p in placed if p[3][0] < tx1 and p[4][0] > tx0]
         cache = {name: cache[name] for name, *_ in active if name in cache}
         for name, mapping, shape, lo, hi in active:
+            if distortion is not None and shape not in maps:
+                maps[shape] = undistort_maps(distortion, shape)
             if name not in cache:
-                cache[name] = load(name).astype(np.float32)
+                cache[name] = _undistort_image(load(name).astype(np.float32), maps.get(shape))
             if shape not in feathers:
-                feathers[shape] = _feather(shape)
+                feathers[shape] = _undistort_image(_feather(shape), maps.get(shape))
             x0, x1 = max(lo[0], tx0), min(hi[0], tx1)
             y0, y1 = lo[1], hi[1]
             roi = np.array([[1, 0, -x0], [0, 1, -y0], [0, 0, 1]]) @ mapping
@@ -108,10 +113,18 @@ def layout_board(
     return board, scales
 
 
-def _footprint(hom: np.ndarray, shape: Tuple[int, int]) -> np.ndarray:
+def _footprint(hom: np.ndarray, shape: Tuple[int, int], distortion: Optional[Distortion] = None) -> np.ndarray:
     h, w = shape
-    corners = np.array([[[0, 0], [w, 0], [w, h], [0, h]]], dtype=np.float64)
-    return cv2.perspectiveTransform(corners, hom)[0]
+    corners = np.array([[0, 0], [w, 0], [w, h], [0, h], [w / 2, 0], [w, h / 2], [w / 2, h], [0, h / 2]], np.float64)
+    if distortion is not None:
+        corners = undistort_points(corners, distortion)
+    return cv2.perspectiveTransform(corners[None], hom)[0]
+
+
+def _undistort_image(image: np.ndarray, maps: Optional[Tuple[np.ndarray, np.ndarray]]) -> np.ndarray:
+    if maps is None:
+        return image
+    return cv2.remap(image, maps[0], maps[1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
 
 
 def _feather(shape: Tuple[int, int]) -> np.ndarray:

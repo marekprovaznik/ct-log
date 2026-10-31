@@ -16,6 +16,9 @@ FRAME_PARAMS = 8
 MARKER_PARAMS = 3
 BLAS_THREADS = 4
 K_BOUNDS = (0.5, 2.0)
+INIT_RANSAC_UNITS = 0.25
+INIT_SCALE_TOLERANCE = 0.2
+DIST_BOUNDS = (-0.5, 0.5)
 
 
 @dataclasses.dataclass
@@ -42,6 +45,14 @@ class FrameFit:
 
 
 @dataclasses.dataclass
+class Distortion:
+    k1: float
+    k2: float
+    centre: Tuple[float, float]
+    radius: float
+
+
+@dataclasses.dataclass
 class PassRegistration:
     frames: List[FrameFit]
     marker_poses: Dict[int, np.ndarray]
@@ -50,6 +61,7 @@ class PassRegistration:
     height_k: float
     seams: Dict[Tuple[int, int], float]
     n_tie_outliers: int
+    distortion: Distortion
 
 
 @dataclasses.dataclass
@@ -72,8 +84,10 @@ class _Problem:
     tie_ua: np.ndarray
     tie_ub: np.ndarray
     principal: np.ndarray
+    radius: float
     side_px: float
     estimate_k: bool
+    estimate_dist: bool
 
 
 def make_detector() -> cv2.aruco.ArucoDetector:
@@ -105,6 +119,7 @@ def register_pass(
     outlier_px: float = 8.0,
     max_rounds: int = 4,
     estimate_height: bool = True,
+    estimate_distortion: bool = True,
     max_ties_per_pair: int = 50,
     seed: int = 0,
 ) -> PassRegistration:
@@ -115,19 +130,31 @@ def register_pass(
     side_px = float(np.median(sides))
     h, w = observations[0].shape
     principal = np.array([w / 2, h / 2])
+    radius = float(np.hypot(w, h) / 2)
     pairs = _subsample(pairs, max_ties_per_pair, seed)
     poses, transforms = _initialise(observations, pairs, min_markers, side_px)
 
     excluded_markers: Set[Tuple[int, int]] = set()
     excluded_ties = [np.zeros(len(p.pts_a), bool) for p in pairs]
-    k = 1.0
+    k, dist = 1.0, np.zeros(2)
     for _ in range(max_rounds):
         problem = _build_problem(
-            observations, pairs, poses, transforms, excluded_markers, excluded_ties, principal, side_px, estimate_height
+            observations,
+            pairs,
+            poses,
+            transforms,
+            excluded_markers,
+            excluded_ties,
+            principal,
+            radius,
+            side_px,
+            estimate_height,
+            estimate_distortion,
         )
-        poses, transforms, k = _solve(problem, poses, transforms, k, robust_scale_px)
-        marker_err = _marker_errors(observations, poses, transforms, side_px)
-        tie_err = _tie_errors(pairs, transforms, k, principal, side_px)
+        poses, transforms, k, dist = _solve(problem, poses, transforms, k, dist, robust_scale_px)
+        distortion = Distortion(float(dist[0]), float(dist[1]), (float(principal[0]), float(principal[1])), radius)
+        marker_err = _marker_errors(observations, poses, transforms, side_px, distortion)
+        tie_err = _tie_errors(pairs, transforms, k, principal, side_px, distortion)
         new_markers = {key for key, err in marker_err.items() if err > outlier_px} - excluded_markers
         new_ties = sum(int(((e > outlier_px) & ~x).sum()) for e, x in zip(tie_err, excluded_ties))
         excluded_markers |= new_markers
@@ -139,7 +166,7 @@ def register_pass(
             break
     poses, transforms, pitch = _align_to_strip(poses, transforms)
 
-    marker_err = _marker_errors(observations, poses, transforms, side_px, per_corner=True)
+    marker_err = _marker_errors(observations, poses, transforms, side_px, distortion, per_corner=True)
     frames = []
     for i, obs in enumerate(observations):
         fit = FrameFit(obs.name, len(obs.ids))
@@ -156,7 +183,7 @@ def register_pass(
                 fit.reproj_max_px = float(np.max(inliers))
             fit.outlier_markers = [int(m) for m in obs.ids if (i, int(m)) in excluded_markers or m not in poses]
         frames.append(fit)
-    tie_err = _tie_errors(pairs, transforms, k, principal, side_px)
+    tie_err = _tie_errors(pairs, transforms, k, principal, side_px, distortion)
     seams = {
         (p.a, p.b): float(np.median(e[~x]))
         for p, e, x in zip(pairs, tie_err, excluded_ties)
@@ -164,15 +191,34 @@ def register_pass(
     }
     n_tie_outliers = int(sum(x.sum() for x in excluded_ties))
     LOGGER.info(
-        "Registered %d/%d frames, height k=%.4f, %d marker and %d tie outliers (> %.1f px)",
+        "Registered %d/%d frames, height k=%.4f, distortion k1=%.4f k2=%.4f, %d marker and %d tie outliers (> %.1f px)",
         len(transforms),
         len(observations),
         k,
+        distortion.k1,
+        distortion.k2,
         len(excluded_markers),
         n_tie_outliers,
         outlier_px,
     )
-    return PassRegistration(frames, poses, side_px, pitch, k, seams, n_tie_outliers)
+    return PassRegistration(frames, poses, side_px, pitch, k, seams, n_tie_outliers, distortion)
+
+
+def undistort_points(pts: np.ndarray, distortion: Distortion) -> np.ndarray:
+    return _undistort(pts, np.array([distortion.k1, distortion.k2]), np.array(distortion.centre), distortion.radius)
+
+
+def undistort_maps(distortion: Distortion, shape: Tuple[int, int], iterations: int = 10) -> Tuple[np.ndarray, np.ndarray]:
+    h, w = shape
+    centre = np.array(distortion.centre, np.float64)
+    grid = np.stack(np.meshgrid(np.arange(w, dtype=np.float64), np.arange(h, dtype=np.float64)), -1).reshape(-1, 2)
+    rel = grid - centre
+    source = rel.copy()
+    for _ in range(iterations):
+        s = (source**2).sum(1) / distortion.radius**2
+        source = rel / (1 + distortion.k1 * s + distortion.k2 * s**2)[:, None]
+    source += centre
+    return source[:, 0].reshape(h, w).astype(np.float32), source[:, 1].reshape(h, w).astype(np.float32)
 
 
 def find_gaps(
@@ -220,9 +266,9 @@ def _initialise(
         for i, obs in enumerate(observations):
             if i in transforms:
                 continue
-            transform = _place_by_markers(obs, poses, min_markers)
+            transform = _plausible(_place_by_markers(obs, poses, min_markers), side_px)
             if transform is None:
-                transform = _place_by_ties(i, neighbours.get(i, []), transforms)
+                transform = _plausible(_place_by_ties(i, neighbours.get(i, []), transforms), side_px)
             if transform is None:
                 continue
             transforms[i] = transform
@@ -237,7 +283,7 @@ def _place_by_markers(obs: FrameObs, poses: Dict[int, np.ndarray], min_markers: 
         return None
     src = obs.corners[known].reshape(-1, 2)
     dst = marker_corners(np.stack([poses[obs.ids[k]] for k in known])).reshape(-1, 2)
-    affine, _ = cv2.estimateAffine2D(src, dst, method=cv2.RANSAC, ransacReprojThreshold=0.02)
+    affine, _ = cv2.estimateAffinePartial2D(src, dst, method=cv2.RANSAC, ransacReprojThreshold=INIT_RANSAC_UNITS)
     return None if affine is None else np.vstack([affine, [0, 0, 1]])
 
 
@@ -245,10 +291,17 @@ def _place_by_ties(index: int, pairs: List[PairMatches], transforms: Dict[int, n
     for pair in sorted(pairs, key=lambda p: -len(p.pts_a)):
         other, own, theirs = (pair.b, pair.pts_a, pair.pts_b) if pair.a == index else (pair.a, pair.pts_b, pair.pts_a)
         if other in transforms:
-            affine, _ = cv2.estimateAffine2D(own, _apply(transforms[other], theirs), method=cv2.LMEDS)
+            affine, _ = cv2.estimateAffinePartial2D(own, _apply(transforms[other], theirs), method=cv2.LMEDS)
             if affine is not None:
                 return np.vstack([affine, [0, 0, 1]])
     return None
+
+
+def _plausible(transform: Optional[np.ndarray], side_px: float) -> Optional[np.ndarray]:
+    if transform is None:
+        return None
+    scale = np.sqrt(abs(np.linalg.det(transform[:2, :2]))) * side_px
+    return transform if abs(scale - 1) <= INIT_SCALE_TOLERANCE else None
 
 
 def _add_markers(obs: FrameObs, transform: np.ndarray, poses: Dict[int, np.ndarray]) -> None:
@@ -269,8 +322,10 @@ def _build_problem(
     excluded_markers: Set[Tuple[int, int]],
     excluded_ties: List[np.ndarray],
     principal: np.ndarray,
+    radius: float,
     side_px: float,
     estimate_k: bool,
+    estimate_dist: bool,
 ) -> _Problem:
     frames = sorted(transforms)
     frame_index = {f: j for j, f in enumerate(frames)}
@@ -301,8 +356,10 @@ def _build_problem(
         tie_ua=np.concatenate([t[2] for t in ties]) if ties else np.zeros((0, 2)),
         tie_ub=np.concatenate([t[3] for t in ties]) if ties else np.zeros((0, 2)),
         principal=principal,
+        radius=radius,
         side_px=side_px,
         estimate_k=estimate_k,
+        estimate_dist=estimate_dist,
     )
 
 
@@ -311,16 +368,23 @@ def _solve(
     poses: Dict[int, np.ndarray],
     transforms: Dict[int, np.ndarray],
     k: float,
+    dist: np.ndarray,
     robust_scale_px: float,
-) -> Tuple[Dict[int, np.ndarray], Dict[int, np.ndarray], float]:
+) -> Tuple[Dict[int, np.ndarray], Dict[int, np.ndarray], float, np.ndarray]:
     gauge = problem.markers[0]
     n_frame_cols = FRAME_PARAMS * len(problem.frames)
     n_marker_cols = MARKER_PARAMS * (len(problem.markers) - 1)
+    k_col = n_frame_cols + n_marker_cols
 
-    def unpack(x: np.ndarray) -> Tuple[np.ndarray, np.ndarray, float]:
+    def unpack(x: np.ndarray) -> Tuple[np.ndarray, np.ndarray, float, np.ndarray]:
         h = np.concatenate([x[:n_frame_cols].reshape(-1, FRAME_PARAMS), np.ones((len(problem.frames), 1))], 1)
-        p = np.concatenate([poses[gauge][None], x[n_frame_cols : n_frame_cols + n_marker_cols].reshape(-1, 3)])
-        return h.reshape(-1, 3, 3), p, x[-1] if problem.estimate_k else k
+        p = np.concatenate([poses[gauge][None], x[n_frame_cols:k_col].reshape(-1, 3)])
+        return (
+            h.reshape(-1, 3, 3),
+            p,
+            x[k_col] if problem.estimate_k else k,
+            x[-2:] if problem.estimate_dist else dist,
+        )
 
     def residuals(x: np.ndarray) -> np.ndarray:
         return _residuals(problem, *unpack(x))
@@ -332,6 +396,7 @@ def _solve(
         [(transforms[f] / transforms[f][2, 2]).ravel()[:FRAME_PARAMS] for f in problem.frames]
         + [poses[m] for m in problem.markers[1:]]
         + ([np.array([k])] if problem.estimate_k else [])
+        + ([dist] if problem.estimate_dist else [])
     )
     with threadpool_limits(BLAS_THREADS):
         result = least_squares(
@@ -343,7 +408,7 @@ def _solve(
             x_scale="jac",
             method="trf",
             tr_solver="exact",
-            bounds=_bounds(len(x0), problem.estimate_k),
+            bounds=_bounds(len(x0), problem.estimate_k, problem.estimate_dist),
         )
     LOGGER.info(
         "Bundle adjustment: %d frames, %d markers, %d marker obs, %d ties, rms %.2f -> %.2f px, %d evaluations",
@@ -355,30 +420,40 @@ def _solve(
         np.sqrt(np.mean(result.fun**2)),
         result.nfev,
     )
-    h, p, k = unpack(result.x)
+    h, p, k, dist = unpack(result.x)
     new_poses = dict(poses)
     new_poses.update(zip(problem.markers, p))
-    return new_poses, {f: h[j] for j, f in enumerate(problem.frames)}, float(k)
+    return new_poses, {f: h[j] for j, f in enumerate(problem.frames)}, float(k), np.asarray(dist, float)
 
 
-def _residuals(problem: _Problem, h: np.ndarray, p: np.ndarray, k: float) -> np.ndarray:
+def _residuals(problem: _Problem, h: np.ndarray, p: np.ndarray, k: float, d: np.ndarray) -> np.ndarray:
     corners = marker_corners(p)[problem.obs_marker].reshape(-1, 2)
     obs_frame = np.repeat(problem.obs_frame, 4)
-    obs_canon, _, _ = _project(h[obs_frame], problem.obs_xy.reshape(-1, 2))
-    ta, _, _ = _project(h[problem.tie_a], _shrink(problem.tie_ua, k, problem.principal))
-    tb, _, _ = _project(h[problem.tie_b], _shrink(problem.tie_ub, k, problem.principal))
+    c, r = problem.principal, problem.radius
+    obs_canon, _, _ = _project(h[obs_frame], _undistort(problem.obs_xy.reshape(-1, 2), d, c, r))
+    ta, _, _ = _project(h[problem.tie_a], _shrink(_undistort(problem.tie_ua, d, c, r), k, c))
+    tb, _, _ = _project(h[problem.tie_b], _shrink(_undistort(problem.tie_ub, d, c, r), k, c))
     return problem.side_px * np.concatenate([(obs_canon - corners).ravel(), (ta - tb).ravel()])
 
 
-def _jacobian(problem: _Problem, h: np.ndarray, p: np.ndarray, k: float, n_frame_cols: int, n_cols: int) -> np.ndarray:
+def _jacobian(
+    problem: _Problem, h: np.ndarray, p: np.ndarray, k: float, d: np.ndarray, n_frame_cols: int, n_cols: int
+) -> np.ndarray:
     n_pts, n_ties = 4 * len(problem.obs_frame), len(problem.tie_a)
     jac = np.zeros((2 * n_pts + 2 * n_ties, n_cols))
     params = np.arange(FRAME_PARAMS)
+    c, r = problem.principal, problem.radius
+    dist_cols = [n_cols - 2, n_cols - 1]
+    k_col = n_cols - 1 - (2 if problem.estimate_dist else 0)
     obs_frame = np.repeat(problem.obs_frame, 4)
-    _, d_h, _ = _project(h[obs_frame], problem.obs_xy.reshape(-1, 2))
+    obs_raw = problem.obs_xy.reshape(-1, 2)
+    _, d_h, d_x = _project(h[obs_frame], _undistort(obs_raw, d, c, r))
     rows = np.arange(2 * n_pts).reshape(n_pts, 2)
     for axis in range(2):
         jac[rows[:, axis, None], FRAME_PARAMS * obs_frame[:, None] + params] = d_h[:, axis]
+    if problem.estimate_dist:
+        for col, basis in zip(dist_cols, _dist_basis(obs_raw, c, r)):
+            jac[rows, col] = np.einsum("nij,nj->ni", d_x, basis)
 
     obs_marker = np.repeat(problem.obs_marker, 4)
     free = obs_marker > 0
@@ -392,13 +467,20 @@ def _jacobian(problem: _Problem, h: np.ndarray, p: np.ndarray, k: float, n_frame
 
     tie_rows = 2 * n_pts + np.arange(2 * n_ties).reshape(n_ties, 2)
     d_k = np.zeros((n_ties, 2))
+    d_dist = np.zeros((2, n_ties, 2))
     for frame, pts, sign in ((problem.tie_a, problem.tie_ua, 1.0), (problem.tie_b, problem.tie_ub, -1.0)):
-        _, d_h, d_x = _project(h[frame], _shrink(pts, k, problem.principal))
+        undistorted = _undistort(pts, d, c, r)
+        _, d_h, d_x = _project(h[frame], _shrink(undistorted, k, c))
         for axis in range(2):
             jac[tie_rows[:, axis, None], FRAME_PARAMS * frame[:, None] + params] = sign * d_h[:, axis]
-        d_k += sign * np.einsum("nij,nj->ni", d_x, -(pts - problem.principal) / k**2)
+        d_k += sign * np.einsum("nij,nj->ni", d_x, -(undistorted - c) / k**2)
+        for j, basis in enumerate(_dist_basis(pts, c, r)):
+            d_dist[j] += sign * np.einsum("nij,nj->ni", d_x, basis / k)
     if problem.estimate_k:
-        jac[tie_rows, n_cols - 1] = d_k
+        jac[tie_rows, k_col] = d_k
+    if problem.estimate_dist:
+        for col, values in zip(dist_cols, d_dist):
+            jac[tie_rows, col] = values
     return problem.side_px * jac
 
 
@@ -422,11 +504,26 @@ def _project(h: np.ndarray, pts: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np
     return r, d_h, d_x
 
 
-def _bounds(n: int, estimate_k: bool) -> Tuple[np.ndarray, np.ndarray]:
+def _bounds(n: int, estimate_k: bool, estimate_dist: bool) -> Tuple[np.ndarray, np.ndarray]:
     lower, upper = np.full(n, -np.inf), np.full(n, np.inf)
+    k_col = n - 1 - (2 if estimate_dist else 0)
     if estimate_k:
-        lower[-1], upper[-1] = K_BOUNDS
+        lower[k_col], upper[k_col] = K_BOUNDS
+    if estimate_dist:
+        lower[-2:], upper[-2:] = DIST_BOUNDS
     return lower, upper
+
+
+def _undistort(pts: np.ndarray, d: np.ndarray, centre: np.ndarray, radius: float) -> np.ndarray:
+    rel = pts - centre
+    s = (rel**2).sum(1) / radius**2
+    return centre + rel * (1 + d[0] * s + d[1] * s**2)[:, None]
+
+
+def _dist_basis(pts: np.ndarray, centre: np.ndarray, radius: float) -> Tuple[np.ndarray, np.ndarray]:
+    rel = pts - centre
+    s = ((rel**2).sum(1) / radius**2)[:, None]
+    return rel * s, rel * s**2
 
 
 def _shrink(pts: np.ndarray, k: float, principal: np.ndarray) -> np.ndarray:
@@ -438,6 +535,7 @@ def _marker_errors(
     poses: Dict[int, np.ndarray],
     transforms: Dict[int, np.ndarray],
     side_px: float,
+    distortion: Distortion,
     per_corner: bool = False,
 ) -> Dict[Tuple[int, int], float]:
     errors = {}
@@ -445,22 +543,27 @@ def _marker_errors(
         obs = observations[i]
         for m, c in zip(obs.ids, obs.corners):
             if m in poses:
-                canon = _apply(t, c)
+                canon = _apply(t, undistort_points(c, distortion))
                 err = side_px * np.linalg.norm(canon - marker_corners(poses[m][None])[0], axis=1)
                 errors[(i, int(m))] = float(np.median(err) if per_corner else err.max())
     return errors
 
 
 def _tie_errors(
-    pairs: List[PairMatches], transforms: Dict[int, np.ndarray], k: float, principal: np.ndarray, side_px: float
+    pairs: List[PairMatches],
+    transforms: Dict[int, np.ndarray],
+    k: float,
+    principal: np.ndarray,
+    side_px: float,
+    distortion: Distortion,
 ) -> List[np.ndarray]:
     errors = []
     for p in pairs:
         if p.a not in transforms or p.b not in transforms:
             errors.append(np.zeros(len(p.pts_a)))
             continue
-        ta = _apply(_wood_transform(transforms[p.a], k, principal), p.pts_a)
-        tb = _apply(_wood_transform(transforms[p.b], k, principal), p.pts_b)
+        ta = _apply(_wood_transform(transforms[p.a], k, principal), undistort_points(p.pts_a, distortion))
+        tb = _apply(_wood_transform(transforms[p.b], k, principal), undistort_points(p.pts_b, distortion))
         errors.append(side_px * np.linalg.norm(ta - tb, axis=1))
     return errors
 

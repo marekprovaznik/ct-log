@@ -4,11 +4,13 @@ from typing import Dict, List
 
 from camera_slider.registration import (
     ARUCO_DICT,
+    Distortion,
     PassRegistration,
     detect_frame,
     find_gaps,
     make_detector,
     register_pass,
+    undistort_points,
 )
 from camera_slider.stitch import group_passes
 from camera_slider.wood import PairMatches, make_sift, match_features, segment_board, wood_features
@@ -26,6 +28,7 @@ FRAME_SIZE = (1200, 800)
 ROLL_DEG = 3.0
 STEP_MM = 60.0
 DROPPED_FRAME = 3
+DISTORTION_K1 = -0.05
 
 
 @pytest.fixture(scope="module")
@@ -56,9 +59,13 @@ def synthetic_pass() -> Dict:
 @pytest.fixture(scope="module")
 def registration(synthetic_pass: Dict) -> PassRegistration:
     """Joint marker + wood registration of the synthetic pass."""
+    return _register(synthetic_pass["frames"], synthetic_pass["names"])
+
+
+def _register(images: List[np.ndarray], names: List[str]) -> PassRegistration:
     detector = make_detector()
-    observations = [detect_frame(n, f, detector) for n, f in zip(synthetic_pass["names"], synthetic_pass["frames"])]
-    features = [wood_features(f, make_sift()) for f in synthetic_pass["frames"]]
+    observations = [detect_frame(n, f, detector) for n, f in zip(names, images)]
+    features = [wood_features(f, make_sift()) for f in images]
     pairs = []
     for a in range(len(features)):
         for b in range(a + 1, min(a + 3, len(features))):
@@ -94,6 +101,33 @@ def test_dropped_frame_is_reported(registration: PassRegistration, synthetic_pas
     shapes = [f.shape[:2] for f in synthetic_pass["frames"]]
     gaps = find_gaps(synthetic_pass["names"], transforms, shapes)
     assert [(g.after, g.n_missing) for g in gaps] == [(synthetic_pass["names"][DROPPED_FRAME - 1], 1)]
+
+
+def test_undistorted_pass_has_no_distortion(registration: PassRegistration) -> None:
+    """A pinhole pass without lens distortion yields k1 close to zero."""
+    assert abs(registration.distortion.k1) < 0.005
+
+
+@pytest.fixture(scope="module")
+def distorted_registration(synthetic_pass: Dict) -> PassRegistration:
+    """Registration of the synthetic pass after applying a known radial distortion to every frame."""
+    h, w = synthetic_pass["frames"][0].shape[:2]
+    grid = np.stack(np.meshgrid(np.arange(w, dtype=np.float64), np.arange(h, dtype=np.float64)), -1).reshape(-1, 2)
+    truth = Distortion(DISTORTION_K1, 0.0, (w / 2, h / 2), float(np.hypot(w, h) / 2))
+    source = undistort_points(grid, truth).astype(np.float32)
+    map_x, map_y = source[:, 0].reshape(h, w), source[:, 1].reshape(h, w)
+    frames = [cv2.remap(f, map_x, map_y, cv2.INTER_LINEAR) for f in synthetic_pass["frames"]]
+    return _register(frames, synthetic_pass["names"])
+
+
+def test_radial_distortion_is_recovered(distorted_registration: PassRegistration) -> None:
+    """The bundle adjustment recovers the radial distortion applied to the frames."""
+    assert distorted_registration.distortion.k1 == pytest.approx(DISTORTION_K1, abs=0.01)
+
+
+def test_seams_stay_subpixel_with_distortion(distorted_registration: PassRegistration) -> None:
+    """With distortion estimated, wood tie points of overlapping frames still meet."""
+    assert max(distorted_registration.seams.values()) < 1.0
 
 
 def test_group_passes_splits_on_time_gaps() -> None:

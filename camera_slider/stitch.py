@@ -47,6 +47,7 @@ def main() -> None:
     parser.add_argument("--marker_mm", type=float, default=None)
     parser.add_argument("--px_per_mm", type=float, default=None)
     parser.add_argument("--no_height_correction", action="store_true")
+    parser.add_argument("--no_distortion", action="store_true", help="do not estimate radial lens distortion")
     parser.add_argument("--max_seam_px", type=float, default=3.0)
     parser.add_argument("--ext", choices=["jpg", "png"], default="jpg")
     parser.add_argument("--preview_width", type=int, default=4000)
@@ -140,6 +141,7 @@ def stitch_faces(
             args.outlier_px,
             not args.no_height_correction,
             args.workers,
+            not args.no_distortion,
         )
         for group in groups
     ]
@@ -150,7 +152,7 @@ def stitch_faces(
         shapes = [observations[p].shape for p in group]
         frames = [(f.name, f.transform, shapes[i]) for i, f in enumerate(geometry.frames) if f.registered]
         by_name = {p.name: p for p in group}
-        render = render_face(frames, lambda n: load_image(by_name[n]), px_per_unit)
+        render = render_face(frames, lambda n: load_image(by_name[n]), px_per_unit, distortion=geometry.distortion)
         if render_paths is not None:
             cv2.imwrite(str(render_paths[face - 1]), render.image, [cv2.IMWRITE_JPEG_QUALITY, 95])
         crop = crop_board(render)
@@ -172,12 +174,20 @@ def solve_face(
     outlier_px: float,
     height_correction: bool,
     workers: int,
+    distortion: bool = True,
 ) -> PassRegistration:
     candidates = [(a, b) for a in range(len(features)) for b in range(a + 1, min(a + 1 + MATCH_SPAN, len(features)))]
     with ThreadPoolExecutor(workers) as pool:
         matched = pool.map(lambda ab: match_features(features[ab[0]], features[ab[1]]), candidates)
         pairs = [PairMatches(a, b, *m) for (a, b), m in zip(candidates, matched) if m is not None]
-    return register_pass(observations, pairs, min_markers, outlier_px=outlier_px, estimate_height=height_correction)
+    return register_pass(
+        observations,
+        pairs,
+        min_markers,
+        outlier_px=outlier_px,
+        estimate_height=height_correction,
+        estimate_distortion=distortion,
+    )
 
 
 def face_report(
@@ -217,6 +227,8 @@ def face_report(
         "n_placed": len(transforms),
         "n_placed_by_features": sum(f.placed_by == "features" for f in registration.frames),
         "height_scale_k": registration.height_k,
+        "distortion_k1": registration.distortion.k1,
+        "distortion_k2": registration.distortion.k2,
         "seam_median_px": float(np.median(seams)) if seams else None,
         "seam_max_px": max(seams) if seams else None,
         "n_tie_outliers": registration.n_tie_outliers,
