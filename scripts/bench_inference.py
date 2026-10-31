@@ -79,6 +79,9 @@ def main() -> None:
                 except torch.cuda.OutOfMemoryError:
                     run["error"] = "oom"
                     torch.cuda.empty_cache()
+                except (RuntimeError, AssertionError) as error:
+                    run["error"] = "%s: %s" % (type(error).__name__, str(error)[:200])
+                    torch.cuda.empty_cache()
                 result["runs"].append(run)
                 print(summary(run), flush=True)
                 args.out.parent.mkdir(parents=True, exist_ok=True)
@@ -186,6 +189,8 @@ class TensorRTNet(torch.nn.Module):
     def forward(self, images: torch.Tensor) -> torch.Tensor:
         shape = tuple(images.shape)
         if shape not in self.engines:
+            self.engines.clear()
+            torch.cuda.empty_cache()
             self.engines[shape] = torch_tensorrt.compile(
                 self.net,
                 ir="dynamo",
