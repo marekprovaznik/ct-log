@@ -57,6 +57,68 @@ frame covers) and `flagged_frames`. Per frame: `placed_by` (`markers`, `features
 marker reprojection error, `outlier_markers` and `seam_px`. A frame is flagged when it is unplaced or its
 worst seam exceeds `--max_seam_px`.
 
+## Dataset builder
+
+Builds the annotation dataset from whole scan folders: every board is matched to its ESP CSV, stitched,
+laid out as one unrolled image and cut into pieces for Supervisely.
+
+```bash
+python -m camera_slider.dataset \
+    --scan_root /mnt/D/datasets/camera_slider/Optical_scan_Marek /mnt/D/datasets/camera_slider/raw/board_64 \
+    --out_root /mnt/D/datasets/camera_slider/derived/dataset_v1 \
+    --labels SKEN_2810=spruce sken_3010=larch --workers 16
+```
+
+1. **Index** ([scan_index.py](scan_index.py)). All frames under the scan roots, sorted by EXIF time with
+   subseconds (IMG numbers wrap, and the same file name occurs in both blocks). A gap over `--board_gap_s`
+   starts a new board, over `--pass_gap_s` a new pass.
+2. **Match boards to CSVs.** Frame segments are aligned in time order with every session number of a
+   block (a number without a CSV is an aborted run); block order and session order are searched jointly.
+   The CSV file time (camera clock = ESP + 1 h, CSV written 20–80 s after the last frame) is a cross-check
+   only (`mtime_check` in `index.csv`). `board_ids.jpg` shows each board's first frame with its assigned ID
+   for a visual check against the handwritten number.
+3. **Frames to shots** ([shots.py](shots.py)). The camera position from the markers is fitted to the CSV
+   `pos_mm` per block (rail pitch in mm per marker ID), and each frame gets its shot index, delay and
+   position; skipped shots and late frames are counted per pass.
+4. **Stitch** each pass as above; faces and directions come from the CSV, layout `ADCB` for 4 faces and
+   `AB` for 2.
+5. **Reject** a board (no pieces, status `rejected: ...` in `manifest.csv`) when its CSV match is not
+   `ok`, a face has uncovered columns, or a seam exceeds `--max_reject_seam_px`. Exceptions give
+   `failed: ...`. `--skip_existing` resumes a run.
+
+Outputs under `--out_root`:
+
+| Path | Content |
+|---|---|
+| `index.csv` | Every segment and CSV with its match and reason |
+| `board_ids.jpg` | Contact sheet of first frames with assigned board IDs |
+| `cache/` | Marker detections per session |
+| `boards/<label>_<board>/` | `face_<area>.jpg` + mask, `unrolled.jpg` (`.tif` above 65500 px), `preview.jpg`, `report.json` with the frame-to-shot table; `render_<area>.jpg` with `--save_renders` |
+| `manifest.csv` | One row per board: status, seams, height k, px/mm, shots, pieces |
+| `supervisely/<project>/boards/` | `img/<label>_<board>_x<start>.jpg` pieces (`--pieces`, `--overlap_px`) with empty `ann/` |
+
+Each unrolled board keeps the native resolution of its frames (spruce about 7.7 px/mm, larch about
+13.7 px/mm). Upload the pieces with
+`python -m camera_slider.upload_supervisely --project_dir <out_root>/supervisely/camera_slider`; it
+creates the project with the classes and review tag of the meta project and uploads only missing pieces.
+
+## Data
+
+Scans by Matěj Šimek, 2026-10-28 (spruce) and 2026-10-30 (larch). The delivery is complete; there are no
+further frames.
+
+| Source | Content |
+|---|---|
+| `Optical_scan_Marek/SKEN_2810` | Spruce, 4 faces, 46 frames per face, 2976×1984; frame folders `28vcetne`, `3`–`6`, `zmatek do 28_tusmazat` (holds frames of real boards, so it is included), `kalibrace smrk`; one CSV per board |
+| `Optical_scan_Marek/sken_3010` | Larch, 2 faces, 46 frames per face, 6000×4000; folders `1`, `2`, `kalibrace modrin` |
+| `raw/board_64` | Frames of spruce board 64, delivered separately; its CSV is `SKEN_2810/64.csv` |
+
+With both scan roots the index has 50 spruce and 35 larch boards matched `ok` (plus the 2 calibration
+runs). 32 spruce CSVs and the CSV of larch 6 have no frames; larch 5 has only 56 frames
+(`incomplete frames`); one aborted spruce run (session 62, 55 frames) has no CSV. Three matched boards
+disagree with the CSV file time (spruce_014, spruce_035, larch_007; one frame short each) and are worth a
+look in `board_ids.jpg`.
+
 ## Assumptions and limits
 
 - Each face is planar and roughly parallel to the slider; `k` is one scale per face, about the image centre.
@@ -64,3 +126,6 @@ worst seam exceeds `--max_seam_px`.
 - Lens distortion is radial only (no tangential terms or decentring). On spruce_050 (50 mm lens) the four
   passes give k1 between -0.0014 and -0.0007, under 3 px at the frame corners, and the seams are unchanged.
 - Rendering a ~35k px long face at native resolution peaks at ~7 GB RAM.
+- The strip's black number band touches the marker borders, so only part of the visible markers are
+  detected; wood tie points carry the frames in between. On larch most marker observations are dropped as
+  outliers (182 of 263 on larch_020 face A, spruce 30–80 per face) while the seams stay under 1.5 px.
