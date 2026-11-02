@@ -251,7 +251,6 @@ def train(config: TimberTrainingConfig) -> Dict[str, float]:
             save_resume(resume_path, model, optimizer, scheduler, ema, state, info)
         logger.log_dict(info.to_dict(), "train_info.yaml")
 
-
     test_metrics: Dict[str, float] = {}
     if "test" in loaders:
         if state["best_epoch"] is not None:
@@ -345,7 +344,9 @@ def compute_loss(
         torch.Tensor: Scalar loss.
     """
     focal = masked_focal_loss(logits, target, IGNORE_INDEX, config.focal_alpha, config.focal_gamma)
-    dice = masked_soft_dice_loss(logits, target, IGNORE_INDEX, classes.trained_indices)
+    dice = masked_soft_dice_loss(
+        logits, target, IGNORE_INDEX, classes.trained_indices, present_only=config.dice_present_only
+    )
     return config.distribution_loss_weight * focal + config.district_loss_weight * dice
 
 

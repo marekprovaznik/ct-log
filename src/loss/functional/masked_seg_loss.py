@@ -39,6 +39,7 @@ def masked_soft_dice_loss(
     ignore_index: int,
     classes: List[int],
     smooth: float = 1.0,
+    present_only: bool = False,
 ) -> torch.Tensor:
     """Soft Dice loss over the listed classes, ignoring pixels whose target is ignore_index.
 
@@ -51,6 +52,9 @@ def masked_soft_dice_loss(
         ignore_index: Target value excluded from the loss.
         classes: Output channels that enter the loss (ignored classes left out).
         smooth: Additive smoothing.
+        present_only: Average only over (sample, class) pairs with ground-truth pixels of the
+            class, so samples without a class do not reward predicting it nowhere; false positives
+            are then left to the other loss terms.
 
     Returns:
         torch.Tensor: Scalar loss.
@@ -65,4 +69,9 @@ def masked_soft_dice_loss(
     inter = (probs * one_hot).sum(dim=(2, 3))
     denom = probs.sum(dim=(2, 3)) + one_hot.sum(dim=(2, 3))
     dice = (2.0 * inter + smooth) / (denom + smooth)
+    if present_only:
+        present = one_hot.sum(dim=(2, 3)) > 0
+        if not present.any():
+            return logits.sum() * 0.0
+        return 1.0 - dice[present].mean()
     return 1.0 - dice.mean()
