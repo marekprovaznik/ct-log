@@ -1,0 +1,52 @@
+# timber_v1 run 1 (CT-17): M5 recipe on 2D RGB 800x800 tiles of the CT-13 set.
+# smp U-Net, EfficientNetV2-S encoder with ImageNet weights, decoder 512-256-128-64-32, focal (gamma 2) 0.4 + soft Dice 0.6,
+# no class weights, EMA 0.9995, bf16, Adam 1e-4 with cosine LR, flips + colour jitter. Classes from classes.json;
+# ignored classes and 255 padding are excluded from loss and metrics. Best checkpoint = 5-epoch smoothed val inst_iou_defects.
+
+dataset_root: /home/jovyan/work/ctlog-eval/camera_slider_data/timber_v1
+dataset_version: timber_v1
+min_wood_frac: 0.0
+
+unet_arch: Unet
+unet_encoder: tu-tf_efficientnetv2_s
+unet_decoder_channels: [512, 256, 128, 64, 32]
+bf16: true
+
+lr: 0.0001
+num_epochs: 40
+batch_size: 6
+num_workers: 0
+lr_schedule: cosine
+warmup_epochs: 0
+ema_decay: 0.9995
+augment: true
+seed: 0
+
+distribution_loss_weight: 0.4
+district_loss_weight: 0.6
+focal_alpha: 2.0
+focal_gamma: 2.0
+
+instance_min_pred_area: 16
+best_metric: inst_iou_defects
+smoothing_window: 5
+train_eval_interval: 4
+train_eval_tiles: 300
+
+checkpoint_path: /home/jovyan/work/ctlog-eval/ckpt/timber_v1_unet_effv2s_dec512.pth
+resume: true
+local_checkpoint_dir: /home/jovyan/work/ctlog-eval/ckpt_local/timber_v1_unet_effv2s_dec512
+local_checkpoint_keep: 3
+save_every_epochs: 10
+
+log_interval: 50
+viz_interval: 5
+viz_num_tiles: 4
+use_local_logger: true
+local_log_dir: /home/jovyan/work/ctlog-eval/logs/timber_v1_unet_effv2s_dec512
+use_mlflow: true
+mlflow_experiment_name: ct-timber-v1
+mlflow_run_name: timber-v1-unet-effv2s-dec512
+mlflow_tracking_uri: https://dagshub.com/AddictionLord/ct-log.mlflow
+mlflow_model_min_improvement: 0.005
+log_model: true
