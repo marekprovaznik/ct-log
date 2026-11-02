@@ -1,0 +1,49 @@
+# Local smoke test of src.train_timber on the synthetic mock (scripts/make_timber_mock.py); not a real run.
+
+dataset_root: /mnt/D/datasets/camera_slider/training/timber_mock
+dataset_version: timber_mock
+min_wood_frac: 0.0
+
+unet_arch: Unet
+unet_encoder: tu-tf_efficientnetv2_s
+unet_decoder_channels: [512, 256, 128, 64, 32]
+bf16: true
+
+lr: 0.0001
+num_epochs: 2
+batch_size: 2
+num_workers: 0
+lr_schedule: cosine
+warmup_epochs: 0
+ema_decay: 0.9995
+augment: true
+seed: 0
+
+distribution_loss_weight: 0.4
+district_loss_weight: 0.6
+focal_alpha: 2.0
+focal_gamma: 2.0
+
+instance_min_pred_area: 16
+best_metric: inst_iou_defects
+smoothing_window: 5
+train_eval_interval: 1
+train_eval_tiles: 300
+
+checkpoint_path: /tmp/ctlog-timber-mock/ckpt/timber_v1_unet_effv2s_dec512.pth
+resume: true
+local_checkpoint_dir: /tmp/ctlog-timber-mock/ckpt_local/timber_v1_unet_effv2s_dec512
+local_checkpoint_keep: 3
+save_every_epochs: 10
+
+log_interval: 1
+viz_interval: 1
+viz_num_tiles: 4
+use_local_logger: true
+local_log_dir: /tmp/ctlog-timber-mock/logs/timber_v1_unet_effv2s_dec512
+use_mlflow: false
+mlflow_experiment_name: ct-timber-v1
+mlflow_run_name: timber-mock-smoke
+mlflow_tracking_uri: https://dagshub.com/AddictionLord/ct-log.mlflow
+mlflow_model_min_improvement: 0.005
+log_model: false
