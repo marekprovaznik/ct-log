@@ -20,7 +20,7 @@ def main() -> None:
     parser.add_argument("--out", type=Path, default=None, help="default: <root>/gallery.html")
     parser.add_argument("--per_group", type=int, default=6, help="random tiles per split x species")
     parser.add_argument("--per_class", type=int, default=6, help="tiles per defect class")
-    parser.add_argument("--cols", type=int, default=3)
+    parser.add_argument("--cols", type=int, default=2)
     parser.add_argument("--thumb", type=int, default=400)
     parser.add_argument("--alpha", type=float, default=0.45)
     parser.add_argument("--seed", type=int, default=0)
@@ -72,7 +72,7 @@ def section_figure(
     fig = make_subplots(
         rows=rows,
         cols=args.cols * 2,
-        subplot_titles=[t for t in titles for _ in (0, 1)],
+        subplot_titles=[f"{t}<br>{side}" for t in titles for side in ("image", "labels")],
         horizontal_spacing=0.01,
         vertical_spacing=0.06,
     )
@@ -93,7 +93,7 @@ def section_figure(
     fig.update_yaxes(visible=False)
     fig.update_annotations(font_size=9)
     fig.update_layout(
-        title=title, height=330 * rows + 80, width=360 * args.cols * 2, margin={"l": 10, "r": 10, "t": 80, "b": 10}
+        title=title, height=420 * rows + 80, autosize=True, margin={"l": 10, "r": 10, "t": 80, "b": 10}
     )
     return fig
 
