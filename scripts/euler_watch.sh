@@ -77,18 +77,7 @@ field() {
 }
 
 stage_creds() {
-    local tmp
-    tmp=$(mktemp)
-    chmod 600 "$tmp"
-    grep -E '^(export )?MLFLOW_TRACKING_(USERNAME|PASSWORD)=' "$REPO/.env" | sed 's/^export //' > "$tmp"
-    if [ "$(wc -l < "$tmp")" -ne 2 ]; then
-        shred -u "$tmp" 2>/dev/null || rm -f "$tmp"
-        return 1
-    fi
-    timeout 120 uv run --no-project "$REPO/scripts/euler.py" put "$tmp" work/ctlog-eval/mlflow_cred.sh > /dev/null 2>&1
-    local rc=$?
-    shred -u "$tmp" 2>/dev/null || rm -f "$tmp"
-    return $rc
+    "$REPO/scripts/euler_stage_mlflow_creds.sh" > /dev/null 2>&1
 }
 
 relaunch() {
