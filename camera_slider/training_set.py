@@ -63,6 +63,10 @@ def main() -> None:
     parser.add_argument("--exclude_tag", nargs="*", default=[], help="pieces with any of these tags are dropped")
     parser.add_argument("--classes", nargs="*", default=None, help="defect classes in priority order, low to high")
     parser.add_argument("--ignored_classes", nargs="*", default=[])
+    parser.add_argument(
+        "--rename", nargs="*", default=[], help="SOURCE=TARGET class renames, e.g. Bark_inclusion=bark_inclusion"
+    )
+    parser.add_argument("--require_objects", action="store_true", help="drop pieces without objects")
     parser.add_argument("--black_threshold", type=int, default=5)
     parser.add_argument("--split_seed", type=int, default=13)
     parser.add_argument("--split_ratios", type=float, nargs=3, default=[0.7, 0.15, 0.15])
@@ -82,7 +86,8 @@ def main() -> None:
 
 def build(args: argparse.Namespace) -> None:
     meta = _read_meta(args.project_dir)
-    classes = build_classes(meta, args.classes, args.ignored_classes)
+    rename = dict(item.split("=", 1) for item in args.rename)
+    classes = build_classes(meta, args.classes, args.ignored_classes, rename)
     priority = [c["name"] for c in classes if c["index"] != IGNORE_INDEX]
     px_per_mm = _read_px_per_mm(args.manifest)
     pieces = collect_pieces(args.project_dir, args)
@@ -118,6 +123,7 @@ def build(args: argparse.Namespace) -> None:
                 "split": split[board],
                 "px_per_mm": px_per_mm[board],
                 "classes": classes,
+                "rename": rename,
                 "target_px_per_mm": args.target_px_per_mm,
                 "tile": args.tile,
                 "overlap": overlap,
@@ -133,8 +139,8 @@ def build(args: argparse.Namespace) -> None:
     write_outputs(out, results, classes, priority, split, overlap, px_per_mm, args)
 
 
-def build_classes(meta: Dict, order: Optional[List[str]], ignored: List[str]) -> List[Dict]:
-    meta_classes = {c["title"]: c for c in meta.get("classes", [])}
+def build_classes(meta: Dict, order: Optional[List[str]], ignored: List[str], rename: Dict[str, str]) -> List[Dict]:
+    meta_classes = {rename.get(c["title"], c["title"]): c for c in meta.get("classes", [])}
     names = order if order is not None else [n for n in meta_classes if n.lower() != WOOD]
     missing = [n for n in names if meta_classes and n not in meta_classes]
     if missing:
@@ -161,7 +167,7 @@ def collect_pieces(project_dir: Path, args: argparse.Namespace) -> List[Piece]:
         ann_path = img_path.parent.parent / "ann" / f"{img_path.name}.json"
         ann = json.loads(ann_path.read_text()) if ann_path.exists() else {"objects": [], "tags": []}
         tags = {t["name"] for t in ann.get("tags", [])}
-        if tags & set(args.exclude_tag):
+        if tags & set(args.exclude_tag) or (args.require_objects and not ann.get("objects")):
             continue
         keep = {
             "all": True,
@@ -256,7 +262,7 @@ def build_strip(job: Dict) -> StripResult:
         ann = json.loads(piece.ann_path.read_text()) if piece.ann_path else {"objects": []}
         offset = piece.x - pieces[0].x
         for obj in ann.get("objects", []):
-            title = obj["classTitle"]
+            title = job["rename"].get(obj["classTitle"], obj["classTitle"])
             if title not in name_to_index or title in (BACKGROUND, WOOD):
                 continue
             mask, bbox = rasterise_object(obj, piece.height, piece.width)
@@ -302,8 +308,8 @@ def build_strip(job: Dict) -> StripResult:
         box = (
             math.floor((ox + x0) * scale),
             math.floor(y0 * scale),
-            math.ceil((ox + x1) * scale),
-            math.ceil(y1 * scale),
+            min(out_w, math.ceil((ox + x1) * scale)),
+            min(out_h, math.ceil(y1 * scale)),
         )
         obj_boxes.append(box)
     defect_names = [c["name"] for c in defect_order]
