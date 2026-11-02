@@ -21,6 +21,7 @@ LOGGER = logging.getLogger(__name__)
 PIECE_RE = re.compile(r"^(?P<board>(?P<species>[a-z]+)_\d+)_x(?P<x>\d+)\.(jpg|png|tif)$")
 WOOD_N = {"spruce": 4, "larch": 2}
 IGNORE_INDEX = 255
+IGNORE = "ignore"
 BACKGROUND = "background"
 WOOD = "wood"
 WOOD_COLOUR = [205, 170, 125]
@@ -88,7 +89,7 @@ def build(args: argparse.Namespace) -> None:
     meta = _read_meta(args.project_dir)
     rename = dict(item.split("=", 1) for item in args.rename)
     classes = build_classes(meta, args.classes, args.ignored_classes, rename)
-    priority = [c["name"] for c in classes if c["index"] != IGNORE_INDEX]
+    priority = [c["name"] for c in classes]
     px_per_mm = _read_px_per_mm(args.manifest)
     pieces = collect_pieces(args.project_dir, args)
     strips = group_strips(pieces)
@@ -146,14 +147,18 @@ def build_classes(meta: Dict, order: Optional[List[str]], ignored: List[str], re
     if missing:
         msg = f"classes not in meta.json: {missing}"
         raise ValueError(msg)
+    unmapped = sorted(n for n in meta_classes if n not in names and n not in (IGNORE, WOOD))
+    if unmapped:
+        LOGGER.warning("classes left out (their pixels stay wood/background): %s", unmapped)
     classes = [
         {"index": 0, "name": BACKGROUND, "colour": [0, 0, 0], "ignored": False},
         {"index": 1, "name": WOOD, "colour": WOOD_COLOUR, "ignored": False},
+        {"index": IGNORE_INDEX, "name": IGNORE, "colour": [255, 255, 255], "ignored": True},
     ]
     for i, name in enumerate(names, start=2):
-        colour = _hex_to_rgb(meta_classes[name]["color"]) if name in meta_classes else _default_colour(i)
+        source = next((c for t, c in meta_classes.items() if t == name), None)
+        colour = _hex_to_rgb(source["color"]) if source else _default_colour(i)
         classes.append({"index": i, "name": name, "colour": colour, "ignored": name in ignored})
-    classes.append({"index": IGNORE_INDEX, "name": "ignore", "colour": [255, 255, 255], "ignored": True})
     return classes
 
 
@@ -270,6 +275,7 @@ def build_strip(job: Dict) -> StripResult:
                 continue
             objects.append(
                 {
+                    "source_class": obj["classTitle"],
                     "class": title,
                     "index": name_to_index[title],
                     "piece": piece.name,
@@ -278,8 +284,9 @@ def build_strip(job: Dict) -> StripResult:
                     "mask": mask,
                 }
             )
-    defect_order = [c for c in classes if c["index"] not in (0, 1, IGNORE_INDEX)]
-    for cls in defect_order:
+    paint_order = [c for c in classes if c["index"] not in (0, 1)]
+    defect_order = [c for c in paint_order if c["index"] != IGNORE_INDEX]
+    for cls in paint_order:
         for obj in objects:
             if obj["index"] != cls["index"]:
                 continue
@@ -291,7 +298,7 @@ def build_strip(job: Dict) -> StripResult:
     out_h, out_w = round(image.shape[0] * scale), round(image.shape[1] * scale)
     small_image = cv2.resize(image, (out_w, out_h), interpolation=cv2.INTER_AREA)
     del image
-    small_mask = downsample_labels(native, (out_w, out_h), [c["index"] for c in classes if c["index"] != IGNORE_INDEX])
+    small_mask = downsample_labels(native, (out_w, out_h), [c["index"] for c in classes])
     del native
     tile, overlap = job["tile"], job["overlap"]
     canvas_h, canvas_w = max(out_h, tile), max(out_w, tile)
@@ -340,7 +347,8 @@ def build_strip(job: Dict) -> StripResult:
                 row[f"n_{name}"] = 0
             for i, (bx0, by0, bx1, by1) in enumerate(obj_boxes):
                 if bx0 >= x and by0 >= y and bx1 <= x + tile and by1 <= y + tile:
-                    row[f"n_{objects[i]['class']}"] += 1
+                    if objects[i]["class"] in defect_names:
+                        row[f"n_{objects[i]['class']}"] += 1
                     covered[i] = True
             tiles.append(row)
     object_rows = [
@@ -348,6 +356,7 @@ def build_strip(job: Dict) -> StripResult:
             "strip": job["strip_id"],
             "piece": obj["piece"],
             "class": obj["class"],
+            "source_class": obj["source_class"],
             "w_mm": round((obj["bbox"][2] - obj["bbox"][0]) / job["px_per_mm"], 1),
             "h_mm": round((obj["bbox"][3] - obj["bbox"][1]) / job["px_per_mm"], 1),
             "whole_in_tile": bool(covered[i]),
@@ -467,7 +476,7 @@ def write_outputs(
     if len(objects):
         objects.to_csv(out / "objects.csv", index=False)
     (out / "wood_components.json").write_text(json.dumps(wood, indent=1))
-    (out / "classes.json").write_text(json.dumps(classes, indent=2))
+    (out / "classes.json").write_text(json.dumps(sorted(classes, key=lambda c: c["index"]), indent=2))
     counts = tiles.groupby(["split", "species"]).size().unstack(fill_value=0)
     board_counts = strips.drop_duplicates("board").groupby(["split", "species"]).size().unstack(fill_value=0)
     native = {
