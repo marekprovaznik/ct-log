@@ -92,9 +92,7 @@ def section_figure(
     fig.update_xaxes(visible=False)
     fig.update_yaxes(visible=False)
     fig.update_annotations(font_size=9)
-    fig.update_layout(
-        title=title, height=420 * rows + 80, autosize=True, margin={"l": 10, "r": 10, "t": 80, "b": 10}
-    )
+    fig.update_layout(title=title, height=420 * rows + 80, autosize=True, margin={"l": 10, "r": 10, "t": 80, "b": 10})
     return fig
 
 
