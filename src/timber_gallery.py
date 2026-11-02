@@ -12,6 +12,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 IGNORE_INDEX = 255
+DISPLAY_COLOURS = {"knot": (255, 60, 0), "resin_pocket": (0, 200, 255)}
 
 
 def main() -> None:
@@ -34,7 +35,9 @@ def main() -> None:
     classes = json.loads((root / "classes.json").read_text())
     palette = colour_table(classes)
     legend = ", ".join(
-        "%s rgb%s" % (c["name"], tuple(c["colour"])) for c in classes if c["name"] not in ("background", "wood")
+        "%s rgb%s" % (c["name"], tuple(DISPLAY_COLOURS.get(c["name"], c["colour"])))
+        for c in classes
+        if c["name"] not in ("background", "wood", "ignore")
     )
     parts: List[str] = []
     for index, (strip, rows) in enumerate(tiles.groupby("strip", sort=True)):
@@ -66,7 +69,7 @@ def colour_table(classes: List[Dict[str, object]]) -> np.ndarray:
     for entry in classes:
         if entry["name"] in ("background", "wood"):
             continue
-        rgb = [float(v) for v in entry["colour"]]
+        rgb = [float(v) for v in DISPLAY_COLOURS.get(str(entry["name"]), entry["colour"])]
         table[int(entry["index"])] = [*rgb, 0.6]
     table[IGNORE_INDEX] = [128.0, 128.0, 128.0, 0.5]
     return table
