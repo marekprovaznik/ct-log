@@ -343,7 +343,15 @@ def compute_loss(
     Returns:
         torch.Tensor: Scalar loss.
     """
-    focal = masked_focal_loss(logits, target, IGNORE_INDEX, config.focal_alpha, config.focal_gamma)
+    weights = None
+    if config.focal_class_weights is not None:
+        if len(config.focal_class_weights) != logits.shape[1]:
+            msg = "focal_class_weights has %d entries, model has %d outputs" % (len(config.focal_class_weights), logits.shape[1])
+            raise ValueError(msg)
+        weights = torch.tensor(config.focal_class_weights)
+    focal = masked_focal_loss(
+        logits, target, IGNORE_INDEX, config.focal_alpha, config.focal_gamma, class_weights=weights
+    )
     dice = masked_soft_dice_loss(
         logits, target, IGNORE_INDEX, classes.trained_indices, present_only=config.dice_present_only
     )

@@ -35,6 +35,7 @@ class TimberTrainingConfig(BaseModel):
     distribution_loss_weight: float = Field(0.4, ge=0)
     district_loss_weight: float = Field(0.6, ge=0)
     dice_present_only: bool = False
+    focal_class_weights: Optional[List[float]] = None
     focal_alpha: float = Field(2.0, gt=0)
     focal_gamma: float = Field(2.0, ge=0)
 

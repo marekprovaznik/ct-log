@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 import torch
 import torch.nn.functional as F
@@ -10,6 +10,7 @@ def masked_focal_loss(
     ignore_index: int,
     alpha: float = 1.0,
     gamma: float = 2.0,
+    class_weights: Optional[torch.Tensor] = None,
 ) -> torch.Tensor:
     """Multi-class focal loss averaged over pixels whose target is not ignore_index.
 
@@ -19,6 +20,8 @@ def masked_focal_loss(
         ignore_index: Target value excluded from the loss.
         alpha: Global scale.
         gamma: Focusing parameter.
+        class_weights: [C] per-class weights; each pixel is weighted by its target class and the
+            loss is the weighted mean over valid pixels (unweighted mean when None).
 
     Returns:
         torch.Tensor: Scalar loss; zero (with grad) when no pixel is valid.
@@ -30,7 +33,10 @@ def masked_focal_loss(
     log_probs = F.log_softmax(logits.float(), dim=1)
     log_p_t = log_probs.gather(1, safe_target.unsqueeze(1)).squeeze(1)
     focal = alpha * (1.0 - log_p_t.exp()) ** gamma * (-log_p_t)
-    return focal[valid].mean()
+    if class_weights is None:
+        return focal[valid].mean()
+    weights = class_weights.to(focal.device, focal.dtype)[safe_target]
+    return (focal * weights)[valid].sum() / weights[valid].sum().clamp_min(1e-12)
 
 
 def masked_soft_dice_loss(
