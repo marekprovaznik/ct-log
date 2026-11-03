@@ -118,7 +118,7 @@ class TimberTileDataset(torch.utils.data.Dataset):
 
         Args:
             root: Dataset root with tiles.csv, classes.json, images/ and masks/.
-            split: Value of the tiles.csv split column.
+            split: Value of the tiles.csv split column; several joined by "+" (e.g. "train+val").
             augment: Random flips and colour jitter.
             augment_strength: "default" (flips, mild jitter) or "strong" (adds scale/rotation, motion or
                 Gaussian blur, lighting gradient, stronger jitter and noise).
@@ -140,7 +140,7 @@ class TimberTileDataset(torch.utils.data.Dataset):
         self.table = self.classes.lookup_table()
         self.known_values = np.array(sorted({c.index for c in self.classes.classes}))
         tiles = pd.read_csv(self.root / "tiles.csv", dtype={"tile_id": str, "board": str, "split": str})
-        tiles = tiles[(tiles["split"] == split) & (tiles["wood_frac"] >= min_wood_frac)]
+        tiles = tiles[tiles["split"].isin(split.split("+")) & (tiles["wood_frac"] >= min_wood_frac)]
         if max_tiles is not None and len(tiles) > max_tiles:
             tiles = tiles.sample(n=max_tiles, random_state=seed)
         self.tiles = tiles.sort_values("tile_id").reset_index(drop=True)
