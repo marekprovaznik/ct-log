@@ -1,9 +1,11 @@
 import argparse
 import json
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
+from camera_slider.training_set import PIECE_RE
 import numpy as np
+import pandas as pd
 from PIL import Image
 import torch
 
@@ -24,15 +26,17 @@ def main() -> None:
     parser.add_argument("--checkpoint", type=str, required=True)
     parser.add_argument("--classes_json", type=str, required=True)
     parser.add_argument("--images", type=str, nargs="+", required=True)
-    parser.add_argument("--px_per_mm", type=float, nargs="+", required=True, help="Native px/mm, one per image.")
+    parser.add_argument("--px_per_mm", type=float, nargs="+", default=None, help="Native px/mm, one per image.")
+    parser.add_argument(
+        "--manifest", type=str, default=None, help="dataset_v1 manifest.csv; px/mm looked up by the board in the name."
+    )
+    parser.add_argument("--skip_existing", action="store_true", help="Keep class maps already in --out_dir.")
     parser.add_argument("--target_px_per_mm", type=float, default=4.0)
     parser.add_argument("--batch_size", type=int, default=4)
     parser.add_argument("--out_dir", type=str, required=True)
     args = parser.parse_args()
 
-    if len(args.images) != len(args.px_per_mm):
-        msg = "Got %d images but %d px_per_mm values" % (len(args.images), len(args.px_per_mm))
-        raise ValueError(msg)
+    px_per_mm_list = resolve_px_per_mm(args.images, args.px_per_mm, args.manifest)
     config = TimberTrainingConfig.from_yaml(args.config)
     classes = TimberClasses.from_json(Path(args.classes_json))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -40,14 +44,19 @@ def main() -> None:
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     manifest = []
-    for image_path, px_per_mm in zip(args.images, args.px_per_mm):
+    for image_path, px_per_mm in zip(args.images, px_per_mm_list):
+        name = Path(image_path).name
+        out_path = out_dir / (Path(name).stem + ".png")
+        if args.skip_existing and out_path.exists():
+            scale = args.target_px_per_mm / px_per_mm
+            manifest.append({"image": str(image_path), "name": name, "scale": scale, "classes": classes.output_names()})
+            continue
         image = Image.open(image_path).convert("RGB")
         scale = args.target_px_per_mm / px_per_mm
         small = image.resize((round(image.width * scale), round(image.height * scale)), Image.Resampling.BOX)
         probs = predict_probs(model, np.asarray(small), classes, device, args.batch_size)
         labels = upsample_labels(probs, image.width, image.height)
-        name = Path(image_path).name
-        Image.fromarray(labels.astype(np.uint8)).save(out_dir / (Path(name).stem + ".png"))
+        Image.fromarray(labels.astype(np.uint8)).save(out_path)
         manifest.append({"image": str(image_path), "name": name, "scale": scale, "classes": classes.output_names()})
         print(
             "%s scale %.3f counts %s"
@@ -55,6 +64,25 @@ def main() -> None:
             flush=True,
         )
     (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2))
+
+
+def resolve_px_per_mm(images: List[str], px_per_mm: Optional[List[float]], manifest: Optional[str]) -> List[float]:
+    if (px_per_mm is None) == (manifest is None):
+        msg = "Pass exactly one of --px_per_mm and --manifest"
+        raise ValueError(msg)
+    if px_per_mm is not None:
+        if len(images) != len(px_per_mm):
+            msg = "Got %d images but %d px_per_mm values" % (len(images), len(px_per_mm))
+            raise ValueError(msg)
+        return px_per_mm
+    frame = pd.read_csv(manifest)
+    by_board = dict(zip(frame.board, frame.px_per_mm.astype(float)))
+    boards = [PIECE_RE.match(Path(image).name)["board"] for image in images]
+    missing = sorted({board for board in boards if board not in by_board or np.isnan(by_board[board])})
+    if missing:
+        msg = "No px_per_mm in %s for boards %s" % (manifest, missing)
+        raise ValueError(msg)
+    return [by_board[board] for board in boards]
 
 
 def tile_starts(length: int) -> List[int]:
