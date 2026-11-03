@@ -33,12 +33,10 @@ vychází model v1 (run 3) takto:
 | knot | 0.748 | 0.807 | 745 | 793 |
 | resin_pocket | 0.668 | 0.799 | 28 | 43 |
 
-Zkusili jsme i model naučený na trénovacích i validačních prknech dohromady (run 4, o 11 prken víc). U
-suků vychází na testu prakticky stejně jako v1 (`inst_iou` 0.752 po epoše 27 a 0.749 po epoše 31). U
-smolníků se ale mezi epochami 27 a 31 téhož běhu výsledek hodně mění: předpovězených smolníků je 68, resp.
-32 při 28 skutečných a `inst_iou` 0.680, resp. 0.621. Čísla pro smolníky tedy stojí na 28 objektech a
-kolísají víc, než jsou rozdíly mezi modely. Protože run 4 nemá validační prkna, na kterých by se dal
-nezávisle porovnat, zůstává jako v1 run 3.
+Zkusili jsme i model naučený na trénovacích i validačních prknech dohromady (run 4, o 11 prken víc). Suky
+na testu našel o málo lépe (`inst_iou` 0.752, `map50` 0.815), ale smolníků předpověděl 68 místo 43 při 28
+skutečných, na smrku 27 při 5 skutečných. Protože nemá validační prkna, na kterých by se dal nezávisle
+porovnat, zůstává jako v1 run 3.
 
 **Jak čísla číst.**
 - Objekt je souvislá oblast jedné třídy na celém pásu prkna. Předpovězené objekty menší než 16 px
@@ -172,8 +170,7 @@ higher is better.
 | 1 | [`17e1310c4e404ff6a3cdea2a43c96f07`](https://dagshub.com/AddictionLord/ct-log.mlflow/#/experiments/4/runs/17e1310c4e404ff6a3cdea2a43c96f07) | M5 recipe; flips and colour jitter | 64 planned, stopped after 18 | 5 | 0.347 | 0.474 | 0.518 | 0.436 | 0.415 |
 | 2 | [`e84875b3078a424ba609f269cf0569da`](https://dagshub.com/AddictionLord/ct-log.mlflow/#/experiments/4/runs/e84875b3078a424ba609f269cf0569da) | Dice term only on tiles where the class is present (`dice_present_only`) | 64 | 24 | 0.696 | 0.690 | 0.779 | 0.695 | 0.777 |
 | **3 (v1)** | [`9d7849ff31fe4752aa4702b309912b36`](https://dagshub.com/AddictionLord/ct-log.mlflow/#/experiments/4/runs/9d7849ff31fe4752aa4702b309912b36) | strong augmentation (`augment_strength` strong) and 32 epochs | 32 | 27 | **0.700** | **0.700** | **0.791** | 0.708 | **0.803** |
-| 4, epoch 27 | [`ce10a131a63344668f467765fe9ae8da`](https://dagshub.com/AddictionLord/ct-log.mlflow/#/experiments/4/runs/ce10a131a63344668f467765fe9ae8da) | run 3 recipe trained on train + val (59 boards) | 32 | 27 (run 3's epoch) | no val score | no val score | no val score | **0.716** | 0.798 |
-| 4, epoch 31 | same run | same | 32 | 31 (last) | no val score | no val score | no val score | 0.685 | 0.791 |
+| 4 | [`ce10a131a63344668f467765fe9ae8da`](https://dagshub.com/AddictionLord/ct-log.mlflow/#/experiments/4/runs/ce10a131a63344668f467765fe9ae8da) | run 3 recipe trained on train + val (59 boards) | 32 planned, stopped after 28 | 27 (fixed) | no val score | no val score | no val score | **0.716** | 0.798 |
 
 - **Run 1** stopped predicting resin pockets from epoch 7 on (`val/n_pred_resin_pocket` 0). The soft Dice
   was computed per tile and class and averaged over all pairs; resin is present in about 5 % of tiles, so the
@@ -183,22 +180,18 @@ higher is better.
 - **Run 3** adds stronger augmentation (scale 0.8-1.25, rotation ±10°, motion or Gaussian blur, lighting
   gradient, stronger colour jitter, noise) and halves the schedule to 32 epochs because run 2 peaked at
   epoch 24 and then slowly overfit. Two settings changed at once.
-- **Run 4** is run 3's recipe trained on the train and validation boards together (59 boards) for all 32
-  epochs. With no validation set to choose on, it is evaluated at epoch 27 (run 3's chosen epoch) and at the
-  last epoch, 31. Its MLflow `val/` keys are computed on boards it was trained on and are not a validation
-  score; they are left out of [data/mlflow_runs.json](data/mlflow_runs.json). All epochs are in run
-  `ce10a131`; epochs 28-31 were trained in a resumed run,
-  [`8b93deab9c984d44822dbe1c8df971eb`](https://dagshub.com/AddictionLord/ct-log.mlflow/#/experiments/4/runs/8b93deab9c984d44822dbe1c8df971eb),
-  whose metrics are copied into `ce10a131` and which holds the artifacts of those epochs.
+- **Run 4** is run 3's recipe trained on the train and validation boards together (59 boards), stopped
+  after epoch 27, run 3's chosen epoch, since there is no validation set to choose on (MLflow status
+  KILLED). Its MLflow `val/` keys are computed on boards it was trained on and are not a validation score;
+  they are left out of [data/mlflow_runs.json](data/mlflow_runs.json).
 
 **Choice: run 3, epoch 27.** Run 3 is ahead of run 2 on validation by 0.010 `inst_iou_defects` and 0.012
-`map50_defects`, and test agrees (+0.012 and +0.026). Run 4 can only be compared on test. Its knot metrics
-are close to run 3 at both epochs (`inst_iou_knot` 0.752 and 0.749 vs 0.748). Its resin metrics swing
-between two epochs of the same run: `n_pred_resin_pocket` 68 at epoch 27 and 32 at epoch 31 against 28
-annotated, `inst_iou_resin_pocket` 0.680 and 0.621, `inst_f1_50_resin_pocket` 0.479 and 0.733. Resin test
-numbers rest on 28 objects and vary more between neighbouring epochs than between runs, so the test set
-cannot separate run 4 from run 3; run 3, chosen on validation, stays v1. Each run was trained once with one
-seed, so differences of about 0.01 are within what a different seed could produce.
+`map50_defects`, and test agrees (+0.012 and +0.026). Run 4 can only be compared on test, where it is mixed
+against run 3: `inst_iou_defects` +0.009 and the knot metrics slightly higher, but `map50_defects` -0.005,
+`map50_95_defects` -0.010 and clearly lower resin precision (`n_pred_resin_pocket` 68 vs 43 against 28
+annotated, `inst_f1_50_resin_pocket` 0.479 vs 0.648; on spruce 27 predicted vs 5 annotated). Run 3 stays v1;
+run 4 shows what 11 more boards do with this recipe. Each run was trained once with one seed, so
+differences of about 0.01 are within what a different seed could produce.
 
 ## Evaluation
 
@@ -226,9 +219,8 @@ Tab. 4: Test boards per class, strip level (11 boards, 13 strips). Best value pe
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 0.645 | 0.729 | 0.512 | 0.807 | 641 | 0.226 | 0.101 | 0.040 | 0.084 | 115 |
 | 2 | 0.738 | 0.793 | 0.582 | 0.827 | 759 | 0.653 | 0.761 | 0.489 | 0.571 | 49 |
-| 3 (v1) | 0.748 | 0.807 | 0.585 | 0.828 | 793 | 0.668 | **0.799** | **0.525** | 0.648 | 43 |
-| 4, epoch 27 | **0.752** | 0.815 | **0.595** | 0.829 | 797 | **0.680** | 0.781 | 0.496 | 0.479 | 68 |
-| 4, epoch 31 | 0.749 | **0.817** | 0.589 | **0.831** | 791 | 0.621 | 0.765 | 0.456 | **0.733** | 32 |
+| 3 (v1) | 0.748 | 0.807 | 0.585 | 0.828 | 793 | 0.668 | **0.799** | **0.525** | **0.648** | 43 |
+| 4 (train + val) | **0.752** | **0.815** | **0.595** | **0.829** | 797 | **0.680** | 0.781 | 0.496 | 0.479 | 68 |
 
 `n_gt_knot` 745, `n_gt_resin_pocket` 28. The `n_pred` columns are counts, not scores, and are not bolded.
 
@@ -242,16 +234,14 @@ Tab. 5: Validation boards per class, strip level (11 boards, 17 strips; `n_gt_kn
 | 3 | **0.712** | **0.799** | 781 | **0.688** | **0.783** | 119 |
 
 Tab. 6: Runs 3 and 4, test boards per species, strip level (larch 5 boards / 6 strips, spruce 6 / 7). Best
-of the three rows per species in bold (both when tied).
+of the two runs per species in bold.
 
 | species | run | `inst_iou_knot` | `map50_knot` | `inst_f1_50_knot` | `n_gt_knot` / `n_pred_knot` | `inst_iou_resin_pocket` | `map50_resin_pocket` | `inst_f1_50_resin_pocket` | `n_gt_resin_pocket` / `n_pred_resin_pocket` |
 |---|---|---:|---:|---:|---|---:|---:|---:|---|
-| larch | 3 (v1) | 0.725 | 0.782 | 0.816 | 336 / 343 | 0.701 | **0.839** | 0.741 | 23 / 31 |
-| larch | 4, epoch 27 | **0.741** | 0.801 | **0.825** | 336 / 350 | **0.719** | 0.830 | 0.635 | 23 / 40 |
-| larch | 4, epoch 31 | 0.739 | **0.806** | 0.824 | 336 / 356 | 0.649 | 0.813 | **0.792** | 23 / 25 |
-| spruce | 3 (v1) | **0.766** | 0.835 | **0.838** | 409 / 450 | **0.515** | **0.604** | 0.353 | 5 / 12 |
-| spruce | 4, epoch 27 | 0.762 | **0.838** | 0.832 | 409 / 447 | 0.514 | **0.604** | 0.188 | 5 / 27 |
-| spruce | 4, epoch 31 | 0.756 | 0.828 | 0.837 | 409 / 435 | 0.491 | 0.554 | **0.500** | 5 / 7 |
+| larch | 3 (v1) | 0.725 | 0.782 | 0.816 | 336 / 343 | 0.701 | **0.839** | **0.741** | 23 / 31 |
+| larch | 4 | **0.741** | **0.801** | **0.825** | 336 / 350 | **0.719** | 0.830 | 0.635 | 23 / 40 |
+| spruce | 3 (v1) | **0.766** | 0.835 | **0.838** | 409 / 450 | **0.515** | 0.604 | **0.353** | 5 / 12 |
+| spruce | 4 | 0.762 | **0.838** | 0.832 | 409 / 447 | 0.514 | 0.604 | 0.188 | 5 / 27 |
 
 The spruce resin values rest on 5 annotated objects.
 
@@ -263,9 +253,8 @@ model is limited by the amount of annotated data rather than by capacity.
 
 Sources: [data/eval_run1_run2/](data/eval_run1_run2/) (runs 1 and 2; each JSON holds both checkpoints:
 `ckpt/timber_v1_unet_effv2s_dec512.pth` = run 1 epoch 5, `seg_head_epoch_24.pth` = run 2),
-[data/eval_run3/](data/eval_run3/) (run 3 epoch 27), [data/eval_run4_ep27/](data/eval_run4_ep27/) and
-[data/eval_run4_ep31/](data/eval_run4_ep31/) (run 4; the checkpoint paths in the run 3 and run 4 files are
-local copies) and
+[data/eval_run3/](data/eval_run3/) (run 3 epoch 27), [data/eval_run4/](data/eval_run4/) (run 4 epoch 27;
+the checkpoint paths in the run 3 and run 4 files are local copies) and
 [data/mlflow_runs.json](data/mlflow_runs.json) (selection curve, chosen epochs and per-tile `val/` values,
 read from MLflow on 2026-11-03). Run 2 was evaluated on Euler and runs 3 and 4 on a local GPU, all in bf16.
 
@@ -302,19 +291,18 @@ A plotly gallery of all 13 test strips (`gallery_test_run3.html`, 11 MB) is made
 ## Known limitations
 
 - **Few resin pockets.** 216 usable objects, 29 of them on spruce; 28 on the test boards (5 on spruce). The
-  resin scores are uncertain, the spruce ones most of all: within run 4, `n_pred_resin_pocket` on test goes
-  from 68 at epoch 27 to 32 at epoch 31 while the knot metrics barely move.
+  resin scores are uncertain, the spruce ones most of all.
 - **Resin over-prediction.** About 1.4 to 1.5 times more resin objects are predicted than annotated
-  (val 119 vs 87, test 43 vs 28). Some of them may be unannotated resin; this has not been checked.
+  (val 119 vs 87, test 43 vs 28). Some of them may be unannotated resin; this has not been checked. Training
+  on 11 more boards (run 4) made it worse on test (68 vs 28).
 - **Very small knots.** On the test boards (run 3, a knot counts as found at best IoU ≥ 0.5), 109 of 745
   knots are missed and 157 predicted knots match none; 79.8 % of the missed and 82.2 % of the false ones are
   under 20 mm² (about 5 mm across), with median areas 4.1 and 5.0 mm². Found knots have a median of
-  35.2 mm². Run 2: 123 missed, 137 false, 81.3 % and 79.6 % under 20 mm². Run 4 epoch 27: 107 missed,
-  159 false, 82.2 % and 83.0 %; epoch 31: 110 missed, 156 false, 82.7 % and 78.8 %
+  35.2 mm². Run 2: 123 missed, 137 false, 81.3 % and 79.6 % under 20 mm². Run 4: 107 missed, 159 false,
+  82.2 % and 83.0 % under 20 mm²
   ([data/eval_run3/knot_error_sizes_test.json](data/eval_run3/knot_error_sizes_test.json),
   [data/eval_run1_run2/knot_error_sizes_test_run2.json](data/eval_run1_run2/knot_error_sizes_test_run2.json),
-  [data/eval_run4_ep27/knot_error_sizes_test.json](data/eval_run4_ep27/knot_error_sizes_test.json),
-  [data/eval_run4_ep31/knot_error_sizes_test.json](data/eval_run4_ep31/knot_error_sizes_test.json),
+  [data/eval_run4/knot_error_sizes_test.json](data/eval_run4/knot_error_sizes_test.json),
   `python -m src.timber_error_sizes`).
 - **Knot types merged.** No distinction between sound, dead and wing knots, and no pith, bark inclusion,
   steel or oblina output.
@@ -340,9 +328,8 @@ A plotly gallery of all 13 test strips (`gallery_test_run3.html`, 11 MB) is made
 - Run 2 checkpoint (Euler):
   `~/work/ctlog-eval/ckpt_local/timber_v1_unet_effv2s_dec512_dicepresent/timber-v1-unet-effv2s-dec512-dicepresent-64ep/seg_head_epoch_24.pth`,
   sha256 `9b3d0ed4871970265e6e119a449671b31c6a127f05f4728d6133381ce3ba8d42`.
-- Run 4 checkpoints (Euler, not delivered), in
-  `~/work/ctlog-eval/ckpt_local/timber_v1_unet_effv2s_dec512_dicepresent_augstrong_trainval/timber-v1-unet-effv2s-dec512-dicepresent-augstrong-trainval-32ep_periodic/`:
-  `seg_head_epoch_27.pth`, sha256 `d29b034b5e43cad54b54d7427f2bf494cc04eb6ae1a027f67fda69faadb7ded4`;
-  `seg_head_epoch_31.pth`, sha256 `43c18805f37054a4c40b08cdbf7234714926416cf79625a427b4398e7840f9f4`.
+- Run 4 checkpoint (Euler, not delivered):
+  `~/work/ctlog-eval/ckpt_local/timber_v1_unet_effv2s_dec512_dicepresent_augstrong_trainval/timber-v1-unet-effv2s-dec512-dicepresent-augstrong-trainval-32ep_periodic/seg_head_epoch_27.pth`,
+  sha256 `d29b034b5e43cad54b54d7427f2bf494cc04eb6ae1a027f67fda69faadb7ded4`.
 - Training and evaluation code: branch `feat/ct-17-timber-eval` (configs
   `src/configs/train_timber_v1_unet_effv2s_dec512*.yaml`, `src/train_timber.py`, `src/eval_timber.py`).
