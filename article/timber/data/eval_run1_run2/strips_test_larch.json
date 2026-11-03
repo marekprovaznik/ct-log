@@ -1,0 +1,25 @@
+{
+  "split": "test",
+  "mode": "strips",
+  "results": {
+    "ckpt_local/timber_v1_unet_effv2s_dec512_dicepresent/timber-v1-unet-effv2s-dec512-dicepresent-64ep/seg_head_epoch_24.pth": {
+      "n_gt_resin_pocket": 23.0,
+      "n_pred_resin_pocket": 34.0,
+      "inst_f1_50_resin_pocket": 0.6667,
+      "inst_iou_resin_pocket": 0.6844,
+      "map50_resin_pocket": 0.7923,
+      "map50_95_resin_pocket": 0.4963,
+      "n_gt_knot": 336.0,
+      "n_pred_knot": 327.0,
+      "inst_f1_50_knot": 0.8054,
+      "inst_iou_knot": 0.7121,
+      "map50_knot": 0.7574,
+      "map50_95_knot": 0.5667,
+      "inst_iou_defects": 0.69825,
+      "map50_defects": 0.77485,
+      "map50_95_defects": 0.5315,
+      "n_strips": 6.0,
+      "n_tiles": 336.0
+    }
+  }
+}

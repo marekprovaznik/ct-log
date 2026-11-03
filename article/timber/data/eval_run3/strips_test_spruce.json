@@ -1,0 +1,25 @@
+{
+  "split": "test",
+  "mode": "strips",
+  "results": {
+    "/tmp/claude-1000/-home-mary-dev-ct-log/f989129f-093a-49b7-b7a6-719195c99aa9/scratchpad/ct17/ckpt/run3/ep27.pth": {
+      "n_gt_resin_pocket": 5.0,
+      "n_pred_resin_pocket": 12.0,
+      "inst_f1_50_resin_pocket": 0.3529,
+      "inst_iou_resin_pocket": 0.5152,
+      "map50_resin_pocket": 0.604,
+      "map50_95_resin_pocket": 0.4776,
+      "n_gt_knot": 409.0,
+      "n_pred_knot": 450.0,
+      "inst_f1_50_knot": 0.8382,
+      "inst_iou_knot": 0.766,
+      "map50_knot": 0.8345,
+      "map50_95_knot": 0.5954,
+      "inst_iou_defects": 0.6406000000000001,
+      "map50_defects": 0.71925,
+      "map50_95_defects": 0.5365,
+      "n_strips": 7.0,
+      "n_tiles": 532.0
+    }
+  }
+}

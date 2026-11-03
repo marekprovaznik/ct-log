@@ -1,0 +1,752 @@
+{
+ "17e1310c4e404ff6a3cdea2a43c96f07": {
+  "run_name": "timber-v1-unet-effv2s-dec512-64ep",
+  "status": "KILLED",
+  "params": {
+   "augment": "True",
+   "batch_size": "6",
+   "best_metric": "inst_iou_defects",
+   "ema_decay": "0.9995",
+   "focal_gamma": "2.0",
+   "git_commit": "4ce3766bea73e565659753beac06aef56bb5278d",
+   "lr": "0.0001",
+   "lr_schedule": "cosine",
+   "num_epochs": "64",
+   "smoothing_window": "5",
+   "train_split": "train",
+   "val_split": "val",
+   "unet_encoder": "tu-tf_efficientnetv2_s",
+   "unet_decoder_channels": "[512, 256, 128, 64, 32]"
+  },
+  "tags": {
+   "hypothesis": "M5 recipe (U-Net EffV2-S dec512, focal+soft Dice, EMA, bf16, cosine) transfers to RGB timber tiles with ImageNet init",
+   "experiment_plan": "CT-17: run 1 = M5 recipe 64 ep; run 2 changes one thing (class weights or pure Dice) from run-1 val metrics",
+   "baseline_run_id": "none (first timber run)",
+   "stopped_reason": "resin_pocket collapsed to 0 predictions from epoch 7 (per-sample Dice on absent class); stopped at epoch 17 to start run 2"
+  },
+  "val/inst_iou_defects": [
+   [
+    0,
+    0.2882
+   ],
+   [
+    1,
+    0.3257
+   ],
+   [
+    2,
+    0.3021
+   ],
+   [
+    3,
+    0.323
+   ],
+   [
+    4,
+    0.3041
+   ],
+   [
+    5,
+    0.4807
+   ],
+   [
+    6,
+    0.3125
+   ],
+   [
+    7,
+    0.3106
+   ],
+   [
+    8,
+    0.3079
+   ],
+   [
+    9,
+    0.3024
+   ],
+   [
+    10,
+    0.3075
+   ],
+   [
+    11,
+    0.3185
+   ],
+   [
+    12,
+    0.3169
+   ],
+   [
+    13,
+    0.3191
+   ],
+   [
+    14,
+    0.3162
+   ],
+   [
+    15,
+    0.2932
+   ],
+   [
+    16,
+    0.3043
+   ],
+   [
+    17,
+    0.3077
+   ]
+  ],
+  "test_per_tile_at_end": {},
+  "best_epoch_smoothed_val": 5,
+  "best_smoothed_val/inst_iou_defects": 0.3471,
+  "val_at_best_epoch": {
+   "val/inst_iou_knot": 0.6004,
+   "val/inst_iou_resin_pocket": 0.3609,
+   "val/inst_iou_defects": 0.4807
+  }
+ },
+ "e84875b3078a424ba609f269cf0569da": {
+  "run_name": "timber-v1-unet-effv2s-dec512-dicepresent-64ep",
+  "status": "FINISHED",
+  "params": {
+   "augment": "True",
+   "batch_size": "6",
+   "best_metric": "inst_iou_defects",
+   "dice_present_only": "True",
+   "ema_decay": "0.9995",
+   "focal_gamma": "2.0",
+   "git_commit": "3be0e3ef2c3033d3488f32df91b0739e67db720e",
+   "lr": "0.0001",
+   "lr_schedule": "cosine",
+   "num_epochs": "64",
+   "smoothing_window": "5",
+   "train_split": "train",
+   "val_split": "val",
+   "unet_encoder": "tu-tf_efficientnetv2_s",
+   "unet_decoder_channels": "[512, 256, 128, 64, 32]"
+  },
+  "tags": {
+   "hypothesis": "Dice over present classes only stops resin_pocket from collapsing to no predictions (run 1 collapsed from epoch 7)",
+   "experiment_plan": "CT-17 run 2: run 1 + dice_present_only; train_eval_tiles 1000 (eval only)",
+   "baseline_run_id": "17e1310c4e404ff6a3cdea2a43c96f07"
+  },
+  "val/inst_iou_defects": [
+   [
+    0,
+    0.2893
+   ],
+   [
+    1,
+    0.3285
+   ],
+   [
+    2,
+    0.3342
+   ],
+   [
+    3,
+    0.3427
+   ],
+   [
+    4,
+    0.4258
+   ],
+   [
+    5,
+    0.6028
+   ],
+   [
+    6,
+    0.6437
+   ],
+   [
+    7,
+    0.6775
+   ],
+   [
+    8,
+    0.6698
+   ],
+   [
+    9,
+    0.677
+   ],
+   [
+    10,
+    0.6816
+   ],
+   [
+    11,
+    0.6929
+   ],
+   [
+    12,
+    0.6841
+   ],
+   [
+    13,
+    0.6876
+   ],
+   [
+    14,
+    0.6892
+   ],
+   [
+    15,
+    0.7029
+   ],
+   [
+    16,
+    0.6902
+   ],
+   [
+    17,
+    0.6861
+   ],
+   [
+    18,
+    0.6916
+   ],
+   [
+    19,
+    0.6883
+   ],
+   [
+    20,
+    0.6977
+   ],
+   [
+    21,
+    0.7032
+   ],
+   [
+    22,
+    0.685
+   ],
+   [
+    23,
+    0.7034
+   ],
+   [
+    24,
+    0.6886
+   ],
+   [
+    25,
+    0.6761
+   ],
+   [
+    26,
+    0.6904
+   ],
+   [
+    27,
+    0.7001
+   ],
+   [
+    28,
+    0.6957
+   ],
+   [
+    29,
+    0.6933
+   ],
+   [
+    30,
+    0.6855
+   ],
+   [
+    31,
+    0.6785
+   ],
+   [
+    32,
+    0.6826
+   ],
+   [
+    33,
+    0.6807
+   ],
+   [
+    34,
+    0.6917
+   ],
+   [
+    35,
+    0.6875
+   ],
+   [
+    36,
+    0.6785
+   ],
+   [
+    37,
+    0.6728
+   ],
+   [
+    38,
+    0.6722
+   ],
+   [
+    39,
+    0.6656
+   ],
+   [
+    40,
+    0.678
+   ],
+   [
+    41,
+    0.6791
+   ],
+   [
+    42,
+    0.6745
+   ],
+   [
+    43,
+    0.6677
+   ],
+   [
+    44,
+    0.6764
+   ],
+   [
+    45,
+    0.6673
+   ],
+   [
+    46,
+    0.6693
+   ],
+   [
+    47,
+    0.6533
+   ],
+   [
+    48,
+    0.6581
+   ],
+   [
+    49,
+    0.6603
+   ],
+   [
+    50,
+    0.6582
+   ],
+   [
+    51,
+    0.658
+   ],
+   [
+    52,
+    0.6545
+   ],
+   [
+    53,
+    0.6582
+   ],
+   [
+    54,
+    0.6533
+   ],
+   [
+    55,
+    0.6546
+   ],
+   [
+    56,
+    0.6553
+   ],
+   [
+    57,
+    0.65
+   ],
+   [
+    58,
+    0.653
+   ],
+   [
+    59,
+    0.6522
+   ],
+   [
+    60,
+    0.6495
+   ],
+   [
+    61,
+    0.6521
+   ],
+   [
+    62,
+    0.6519
+   ],
+   [
+    63,
+    0.6498
+   ]
+  ],
+  "test_per_tile_at_end": {
+   "test/loss": 0.0305,
+   "test/mean_iou": 0.8403,
+   "test/iou_background": 0.9974,
+   "test/iou_wood": 0.9985,
+   "test/iou_resin_pocket": 0.6685,
+   "test/iou_knot": 0.8539,
+   "test/mean_iou_fg": 0.8403,
+   "test/mean_iou_defects_px": 0.7612,
+   "test/n_gt_resin_pocket": 72.0,
+   "test/n_pred_resin_pocket": 126.0,
+   "test/inst_f1_50_resin_pocket": 0.5758,
+   "test/inst_iou_resin_pocket": 0.6429,
+   "test/map50_resin_pocket": 0.7652,
+   "test/map50_95_resin_pocket": 0.4749,
+   "test/n_gt_knot": 1780.0,
+   "test/n_pred_knot": 1799.0,
+   "test/inst_f1_50_knot": 0.8142,
+   "test/inst_iou_knot": 0.7179,
+   "test/map50_knot": 0.7756,
+   "test/map50_95_knot": 0.5527,
+   "test/inst_iou_defects": 0.6804,
+   "test/map50_defects": 0.7704,
+   "test/map50_95_defects": 0.5138
+  },
+  "best_epoch_smoothed_val": 24,
+  "best_smoothed_val/inst_iou_defects": 0.6956,
+  "val_at_best_epoch": {
+   "val/inst_iou_knot": 0.7053,
+   "val/inst_iou_resin_pocket": 0.672,
+   "val/inst_iou_defects": 0.6886
+  }
+ },
+ "9d7849ff31fe4752aa4702b309912b36": {
+  "run_name": "timber-v1-unet-effv2s-dec512-dicepresent-augstrong-32ep",
+  "status": "FINISHED",
+  "params": {
+   "augment": "True",
+   "augment_strength": "strong",
+   "batch_size": "6",
+   "best_metric": "inst_iou_defects",
+   "dice_present_only": "True",
+   "ema_decay": "0.9995",
+   "focal_gamma": "2.0",
+   "git_commit": "3aad909ef2905fb466791d48b70ba48430b00923",
+   "lr": "0.0001",
+   "lr_schedule": "cosine",
+   "num_epochs": "32",
+   "smoothing_window": "5",
+   "train_split": "train",
+   "val_split": "val",
+   "unet_encoder": "tu-tf_efficientnetv2_s",
+   "unet_decoder_channels": "[512, 256, 128, 64, 32]"
+  },
+  "tags": {
+   "hypothesis": "Strong augmentation (scale, small rotation, blur, lighting gradient, stronger jitter, noise) narrows the train/val gap of run 2 (full train vs val inst_iou 0.85 vs 0.71 knot)",
+   "experiment_plan": "CT-17 run 3: run 2 + augment_strength strong, 32 epochs (run 2 peaked at ep 24); then train+val run if time allows",
+   "baseline_run_id": "e84875b3078a424ba609f269cf0569da"
+  },
+  "val/inst_iou_defects": [
+   [
+    0,
+    0.2853
+   ],
+   [
+    1,
+    0.3295
+   ],
+   [
+    2,
+    0.3347
+   ],
+   [
+    3,
+    0.3366
+   ],
+   [
+    4,
+    0.4632
+   ],
+   [
+    5,
+    0.6029
+   ],
+   [
+    6,
+    0.6552
+   ],
+   [
+    7,
+    0.6711
+   ],
+   [
+    8,
+    0.6829
+   ],
+   [
+    9,
+    0.6815
+   ],
+   [
+    10,
+    0.6938
+   ],
+   [
+    11,
+    0.6938
+   ],
+   [
+    12,
+    0.6978
+   ],
+   [
+    13,
+    0.696
+   ],
+   [
+    14,
+    0.7021
+   ],
+   [
+    15,
+    0.7034
+   ],
+   [
+    16,
+    0.6989
+   ],
+   [
+    17,
+    0.6877
+   ],
+   [
+    18,
+    0.6893
+   ],
+   [
+    19,
+    0.7
+   ],
+   [
+    20,
+    0.7041
+   ],
+   [
+    21,
+    0.6999
+   ],
+   [
+    22,
+    0.6911
+   ],
+   [
+    23,
+    0.6958
+   ],
+   [
+    24,
+    0.7098
+   ],
+   [
+    25,
+    0.7027
+   ],
+   [
+    26,
+    0.6958
+   ],
+   [
+    27,
+    0.6977
+   ],
+   [
+    28,
+    0.6898
+   ],
+   [
+    29,
+    0.6915
+   ],
+   [
+    30,
+    0.6921
+   ],
+   [
+    31,
+    0.6915
+   ]
+  ],
+  "test_per_tile_at_end": {
+   "test/loss": 0.0301,
+   "test/mean_iou": 0.8503,
+   "test/iou_background": 0.9966,
+   "test/iou_wood": 0.9983,
+   "test/iou_resin_pocket": 0.6934,
+   "test/iou_knot": 0.8592,
+   "test/mean_iou_fg": 0.8503,
+   "test/mean_iou_defects_px": 0.7763,
+   "test/n_gt_resin_pocket": 72.0,
+   "test/n_pred_resin_pocket": 132.0,
+   "test/inst_f1_50_resin_pocket": 0.5588,
+   "test/inst_iou_resin_pocket": 0.6458,
+   "test/map50_resin_pocket": 0.7734,
+   "test/map50_95_resin_pocket": 0.4747,
+   "test/n_gt_knot": 1780.0,
+   "test/n_pred_knot": 1858.0,
+   "test/inst_f1_50_knot": 0.8142,
+   "test/inst_iou_knot": 0.7249,
+   "test/map50_knot": 0.7882,
+   "test/map50_95_knot": 0.557,
+   "test/inst_iou_defects": 0.6854,
+   "test/map50_defects": 0.7808,
+   "test/map50_95_defects": 0.5159
+  },
+  "best_epoch_smoothed_val": 27,
+  "best_smoothed_val/inst_iou_defects": 0.7004,
+  "val_at_best_epoch": {
+   "val/inst_iou_knot": 0.7106,
+   "val/inst_iou_resin_pocket": 0.6849,
+   "val/inst_iou_defects": 0.6977
+  }
+ },
+ "ce10a131a63344668f467765fe9ae8da": {
+  "run_name": "timber-v1-unet-effv2s-dec512-dicepresent-augstrong-trainval-32ep",
+  "status": "RUNNING",
+  "params": {
+   "augment": "True",
+   "augment_strength": "strong",
+   "batch_size": "6",
+   "best_metric": "inst_iou_defects",
+   "dice_present_only": "True",
+   "ema_decay": "0.9995",
+   "focal_gamma": "2.0",
+   "git_commit": "3aad909ef2905fb466791d48b70ba48430b00923",
+   "lr": "0.0001",
+   "lr_schedule": "cosine",
+   "num_epochs": "32",
+   "smoothing_window": "5",
+   "train_split": "train+val",
+   "val_split": "val",
+   "unet_encoder": "tu-tf_efficientnetv2_s",
+   "unet_decoder_channels": "[512, 256, 128, 64, 32]"
+  },
+  "tags": {
+   "hypothesis": "Adding the 11 val boards to training (48 -> 59 boards) improves test performance of the run-3 recipe",
+   "experiment_plan": "CT-17 run 4: run 3 recipe on train+val; stopped after epoch 27 (run 3's smoothed-val peak); test only",
+   "baseline_run_id": "9d7849ff31fe4752aa4702b309912b36"
+  },
+  "val/inst_iou_defects": [
+   [
+    0,
+    0.3001
+   ],
+   [
+    1,
+    0.3342
+   ],
+   [
+    2,
+    0.5186
+   ],
+   [
+    3,
+    0.6358
+   ],
+   [
+    4,
+    0.6801
+   ],
+   [
+    5,
+    0.6809
+   ],
+   [
+    6,
+    0.7069
+   ],
+   [
+    7,
+    0.7105
+   ],
+   [
+    8,
+    0.7074
+   ],
+   [
+    9,
+    0.7137
+   ],
+   [
+    10,
+    0.72
+   ],
+   [
+    11,
+    0.7289
+   ],
+   [
+    12,
+    0.73
+   ],
+   [
+    13,
+    0.7305
+   ],
+   [
+    14,
+    0.7436
+   ],
+   [
+    15,
+    0.7428
+   ],
+   [
+    16,
+    0.7414
+   ],
+   [
+    17,
+    0.7425
+   ],
+   [
+    18,
+    0.7489
+   ],
+   [
+    19,
+    0.7458
+   ],
+   [
+    20,
+    0.7498
+   ],
+   [
+    21,
+    0.7546
+   ],
+   [
+    22,
+    0.7549
+   ],
+   [
+    23,
+    0.7552
+   ],
+   [
+    24,
+    0.7581
+   ]
+  ],
+  "test_per_tile_at_end": {},
+  "best_epoch_smoothed_val": 24,
+  "best_smoothed_val/inst_iou_defects": 0.7545,
+  "val_at_best_epoch": {
+   "val/inst_iou_knot": 0.7649,
+   "val/inst_iou_resin_pocket": 0.7513,
+   "val/inst_iou_defects": 0.7581
+  }
+ }
+}

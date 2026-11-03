@@ -1,0 +1,31 @@
+{
+  "split": "train",
+  "mode": "tiles",
+  "results": {
+    "/home/jovyan/work/ctlog-eval/ckpt_local/timber_v1_unet_effv2s_dec512_dicepresent/timber-v1-unet-effv2s-dec512-dicepresent-64ep/seg_head_epoch_24.pth": {
+      "iou_background": 0.9977352114595809,
+      "iou_wood": 0.9991411163519404,
+      "iou_resin_pocket": 0.8179502958228918,
+      "iou_knot": 0.9371380374632774,
+      "mean_iou_fg": 0.9180764832127032,
+      "mean_iou_defects_px": 0.8775441666430845,
+      "n_gt_resin_pocket": 270.0,
+      "n_pred_resin_pocket": 393.0,
+      "inst_f1_50_resin_pocket": 0.7541,
+      "inst_iou_resin_pocket": 0.8066,
+      "map50_resin_pocket": 0.8934,
+      "map50_95_resin_pocket": 0.6773,
+      "n_gt_knot": 6615.0,
+      "n_pred_knot": 6643.0,
+      "inst_f1_50_knot": 0.928,
+      "inst_iou_knot": 0.8309,
+      "map50_knot": 0.9204,
+      "map50_95_knot": 0.7308,
+      "inst_iou_defects": 0.81875,
+      "map50_defects": 0.9069,
+      "map50_95_defects": 0.7040500000000001,
+      "loss": 0.011075366182174622,
+      "n_tiles": 3503.0
+    }
+  }
+}
