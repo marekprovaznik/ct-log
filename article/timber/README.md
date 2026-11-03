@@ -8,6 +8,18 @@
 **v1 = run 3, epoch 27** (MLflow `9d7849ff31fe4752aa4702b309912b36`, sha256 `fabbf4df…9917`). Run 4 (the same
 recipe trained on 11 more boards) is reported as an experiment and not delivered.
 
+**Key facts** (details and sources in the sections below):
+- Data: 70 boards (37 spruce, 33 larch) photographed with a camera on a slider and stitched into unrolled
+  board faces; 5,008 annotated objects, of which 4,395 knots and 216 resin pockets are on usable pieces.
+- Split by board: 48 train, 11 validation, 11 test (test: 5 larch, 6 spruce; 745 knots and 28 resin
+  pockets as evaluated).
+- Model: U-Net, EfficientNetV2-S encoder (ImageNet weights), RGB tiles of 800 × 800 px at 4 px/mm
+  (200 × 200 mm), predictions merged over whole board strips.
+- Test results of v1 (whole strips): `inst_iou_knot` 0.748, `map50_knot` 0.807; `inst_iou_resin_pocket`
+  0.668, `map50_resin_pocket` 0.799.
+- Main limits: few resin pockets (28 on test, 5 on spruce), most knot errors are knots under 20 mm², test
+  boards also used in choosing between runs, one seed per run.
+
 Links: [MLflow on DagsHub](https://dagshub.com/AddictionLord/ct-log.mlflow/#/experiments/4), experiment
 `ct-timber-v1` · Supervisely pre-label preview `camera_slider_prelabel_preview_v1` (385810) · data and
 figure sources in [data/](data/) and [figures/](figures/).
@@ -99,6 +111,15 @@ Scans by Matěj Šimek with the camera slider: spruce on 2026-10-28 (4 faces per
 larch on 2026-10-30 (2 faces per board, about 13.7 px/mm). Each face is stitched from the raw frames and the
 faces of a board are stacked into one unrolled image ([camera_slider/README.md](../../camera_slider/README.md)),
 which is cut into 4 pieces per board for annotation in Supervisely.
+
+**Capture setup** (EXIF of 41 sampled frames per species, one scan folder each, all identical within the
+species): Canon EOS 77D, EF 28-135 mm lens, exposure 1/1000 s, ISO 400; spruce at 50 mm, f/8, 2976 × 1984 px,
+larch at 47 mm, f/5.6, 6000 × 4000 px. 46 frames per face. ArUco
+markers on a rail beside the board give the metric scale. The stitcher fits one homography per frame, the
+marker poses, a height scale per face and radial lens distortion jointly from marker corners and SIFT tie
+points on the wood, then feather-blends the frames ([camera_slider/README.md](../../camera_slider/README.md)).
+Of the scanned boards, 85 were matched to their slider logs (50 spruce, 35 larch); 15 of them are not in the
+annotation set (missing markers or uncovered columns, see Matěj's section), leaving 70.
 
 **Face order fix (KAR).** In our stitcher's output the two narrow spruce faces are swapped. Matěj fixed this
 by hand in a copy of the annotation project, `camera_slider_KAR` (385745): all 148 spruce pieces with their
