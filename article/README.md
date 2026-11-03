@@ -11,6 +11,9 @@ Links: [meeting page](https://claude.ai/artifact/SugjP5D8V86jTLxP2CKJM3) (full h
 experiment `ct-log-kwp-teachersplit`, run `kwp-v4-unet-effv2s-w1-dice-ts-48ep-dec512`, run ID
 `d23857a7e83041a0af89e1dc45e36c55`).
 
+**Timber (camera slider board scans):** the v1 defect segmentation model for Matěj is reported separately in
+[timber/README.md](timber/README.md).
+
 Numbers use a decimal point and a comma for thousands (author guidelines). Captions are drafts: Tab. captions go
 above tables, Fig. captions below figures.
 

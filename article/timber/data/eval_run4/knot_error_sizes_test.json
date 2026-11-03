@@ -1,0 +1,25 @@
+{
+  "split": "test",
+  "pred_dir": "/home/mary/dev/zzz/ct-log/tickets/CT-17/eval_run4/pred_test/ep27",
+  "class_index": 3,
+  "iou_threshold": 0.5,
+  "min_pred_area_px": 16,
+  "px_per_mm": 4.0,
+  "small_mm2": 20.0,
+  "matching": "a GT instance is matched if its best IoU with any predicted instance >= iou_threshold; a predicted instance is false if its best IoU with any GT instance < iou_threshold",
+  "matched_gt": {
+    "count": 638,
+    "median_mm2": 34.46875,
+    "share_below_small": 0.40282131661442006
+  },
+  "missed_gt": {
+    "count": 107,
+    "median_mm2": 4.3125,
+    "share_below_small": 0.822429906542056
+  },
+  "false_pred": {
+    "count": 159,
+    "median_mm2": 4.3125,
+    "share_below_small": 0.8301886792452831
+  }
+}

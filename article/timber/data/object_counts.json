@@ -1,0 +1,84 @@
+{
+  "source": "/mnt/D/datasets/camera_slider/training/timber_v1/objects.csv (CT-13 builder; one row per annotated object, joined with strips.csv for split and species)",
+  "by_class_split": {
+    "test": {
+      "ignore": 17,
+      "knot": 738,
+      "resin_pocket": 27
+    },
+    "train": {
+      "ignore": 74,
+      "knot": 2893,
+      "resin_pocket": 103
+    },
+    "val": {
+      "ignore": 37,
+      "knot": 764,
+      "resin_pocket": 86
+    }
+  },
+  "by_source_class_split": {
+    "test": {
+      "Bark_inclusion": 4,
+      "dead_knot": 321,
+      "oblina": 0,
+      "pith": 12,
+      "resin_pocket": 27,
+      "sound_knot": 413,
+      "steel": 1,
+      "wing_knot": 4
+    },
+    "train": {
+      "Bark_inclusion": 42,
+      "dead_knot": 1573,
+      "oblina": 2,
+      "pith": 19,
+      "resin_pocket": 103,
+      "sound_knot": 1294,
+      "steel": 11,
+      "wing_knot": 26
+    },
+    "val": {
+      "Bark_inclusion": 14,
+      "dead_knot": 344,
+      "oblina": 2,
+      "pith": 17,
+      "resin_pocket": 86,
+      "sound_knot": 405,
+      "steel": 4,
+      "wing_knot": 15
+    }
+  },
+  "by_class_split_species": {
+    "test/larch": {
+      "knot": 333,
+      "resin_pocket": 22,
+      "ignore": 9
+    },
+    "test/spruce": {
+      "knot": 405,
+      "ignore": 8,
+      "resin_pocket": 5
+    },
+    "train/larch": {
+      "knot": 1559,
+      "resin_pocket": 83,
+      "ignore": 42
+    },
+    "train/spruce": {
+      "knot": 1334,
+      "ignore": 32,
+      "resin_pocket": 20
+    },
+    "val/larch": {
+      "knot": 490,
+      "resin_pocket": 82,
+      "ignore": 20
+    },
+    "val/spruce": {
+      "knot": 274,
+      "ignore": 17,
+      "resin_pocket": 4
+    }
+  }
+}

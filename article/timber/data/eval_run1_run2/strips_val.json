@@ -1,0 +1,44 @@
+{
+  "split": "val",
+  "mode": "strips",
+  "results": {
+    "/home/jovyan/work/ctlog-eval/ckpt/timber_v1_unet_effv2s_dec512.pth": {
+      "n_gt_resin_pocket": 87.0,
+      "n_pred_resin_pocket": 127.0,
+      "inst_f1_50_resin_pocket": 0.3364,
+      "inst_iou_resin_pocket": 0.3447,
+      "map50_resin_pocket": 0.3509,
+      "map50_95_resin_pocket": 0.155,
+      "n_gt_knot": 777.0,
+      "n_pred_knot": 648.0,
+      "inst_f1_50_knot": 0.7705,
+      "inst_iou_knot": 0.6039,
+      "map50_knot": 0.6846,
+      "map50_95_knot": 0.4592,
+      "inst_iou_defects": 0.4743,
+      "map50_defects": 0.5177499999999999,
+      "map50_95_defects": 0.3071,
+      "n_strips": 17.0,
+      "n_tiles": 766.0
+    },
+    "/home/jovyan/work/ctlog-eval/ckpt_local/timber_v1_unet_effv2s_dec512_dicepresent/timber-v1-unet-effv2s-dec512-dicepresent-64ep/seg_head_epoch_24.pth": {
+      "n_gt_resin_pocket": 87.0,
+      "n_pred_resin_pocket": 113.0,
+      "inst_f1_50_resin_pocket": 0.72,
+      "inst_iou_resin_pocket": 0.6709,
+      "map50_resin_pocket": 0.7728,
+      "map50_95_resin_pocket": 0.4238,
+      "n_gt_knot": 777.0,
+      "n_pred_knot": 779.0,
+      "inst_f1_50_knot": 0.8239,
+      "inst_iou_knot": 0.7084,
+      "map50_knot": 0.7844,
+      "map50_95_knot": 0.531,
+      "inst_iou_defects": 0.6896500000000001,
+      "map50_defects": 0.7786,
+      "map50_95_defects": 0.47740000000000005,
+      "n_strips": 17.0,
+      "n_tiles": 766.0
+    }
+  }
+}

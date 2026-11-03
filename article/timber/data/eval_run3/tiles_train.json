@@ -1,0 +1,31 @@
+{
+  "split": "train",
+  "mode": "tiles",
+  "results": {
+    "/tmp/claude-1000/-home-mary-dev-ct-log/f989129f-093a-49b7-b7a6-719195c99aa9/scratchpad/ct17/ckpt/run3/ep27.pth": {
+      "iou_background": 0.9969348427922999,
+      "iou_wood": 0.9988370547246264,
+      "iou_resin_pocket": 0.7337146121360907,
+      "iou_knot": 0.9184889479988843,
+      "mean_iou_fg": 0.8836802049532005,
+      "mean_iou_defects_px": 0.8261017800674875,
+      "n_gt_resin_pocket": 270.0,
+      "n_pred_resin_pocket": 505.0,
+      "inst_f1_50_resin_pocket": 0.6348,
+      "inst_iou_resin_pocket": 0.7598,
+      "map50_resin_pocket": 0.8564,
+      "map50_95_resin_pocket": 0.575,
+      "n_gt_knot": 6615.0,
+      "n_pred_knot": 6823.0,
+      "inst_f1_50_knot": 0.8983,
+      "inst_iou_knot": 0.8045,
+      "map50_knot": 0.8961,
+      "map50_95_knot": 0.6814,
+      "inst_iou_defects": 0.78215,
+      "map50_defects": 0.87625,
+      "map50_95_defects": 0.6282,
+      "loss": 0.015346271788515895,
+      "n_tiles": 3503.0
+    }
+  }
+}
