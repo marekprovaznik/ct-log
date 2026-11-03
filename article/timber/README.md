@@ -45,11 +45,6 @@ vychází model v1 (run 3) takto:
 | knot | 0.748 | 0.807 | 745 | 793 |
 | resin_pocket | 0.668 | 0.799 | 28 | 43 |
 
-Zkusili jsme i model naučený na trénovacích i validačních prknech dohromady (run 4, o 11 prken víc). Suky
-na testu našel o málo lépe (`inst_iou` 0.752, `map50` 0.815), ale smolníků předpověděl 68 místo 43 při 28
-skutečných, na smrku 27 při 5 skutečných. Protože nemá validační prkna, na kterých by se dal nezávisle
-porovnat, zůstává jako v1 run 3.
-
 **Jak čísla číst.**
 - Objekt je souvislá oblast jedné třídy na celém pásu prkna. Předpovězené objekty menší než 16 px
   (1 mm² při 4 px/mm) se zahazují.
@@ -318,8 +313,8 @@ A plotly gallery of all 13 test strips (`gallery_test_run3.html`, 11 MB) is made
 - **Few resin pockets.** 216 usable objects, 29 of them on spruce; 28 on the test boards (5 on spruce). The
   resin scores are uncertain, the spruce ones most of all.
 - **Resin over-prediction.** About 1.4 to 1.5 times more resin objects are predicted than annotated
-  (val 119 vs 87, test 43 vs 28). Some of them may be unannotated resin; this has not been checked. Training
-  on 11 more boards (run 4) made it worse on test (68 vs 28).
+  (val 119 vs 87, test 43 vs 28). Some of them may be unannotated resin; this has not been checked. Run 4,
+  trained on 11 more boards, predicts 68 on test.
 - **Very small knots.** On the test boards (run 3, a knot counts as found at best IoU ≥ 0.5), 109 of 745
   knots are missed and 157 predicted knots match none; 79.8 % of the missed and 82.2 % of the false ones are
   under 20 mm² (about 5 mm across), with median areas 4.1 and 5.0 mm². Found knots have a median of
