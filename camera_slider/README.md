@@ -93,7 +93,7 @@ Outputs under `--out_root`:
 | `index.csv` | Every segment and CSV with its match and reason |
 | `board_ids.jpg` | Contact sheet of first frames with assigned board IDs |
 | `cache/` | Marker detections per session |
-| `boards/<label>_<board>/` | `face_<area>.jpg` + mask, `unrolled.jpg` (`.tif` above 65500 px), `preview.jpg`, `report.json` with the frame-to-shot table; `render_<area>.jpg` with `--save_renders` |
+| `boards/<label>_<board>/` | `face_<area>.jpg` + mask, `unrolled.jpg` (`.tif` above 65500 px), `preview.jpg`, `report.json` with the frame-to-shot table, `mapping.json` + `owner_<area>.png` (see [Stitch mapping](#stitch-mapping)); `render_<area>.jpg` with `--save_renders` |
 | `manifest.csv` | One row per board: status, seams, height k, px/mm, shots, pieces |
 | `supervisely/<project>/boards/` | `img/<label>_<board>_x<start>.jpg` pieces (`--pieces`, `--overlap_px`) with empty `ann/` |
 
@@ -118,6 +118,47 @@ runs). 32 spruce CSVs and the CSV of larch 6 have no frames; larch 5 has only 56
 (`incomplete frames`); one aborted spruce run (session 62, 55 frames) has no CSV. Three matched boards
 disagree with the CSV file time (spruce_014, spruce_035, larch_007; one frame short each) and are worth a
 look in `board_ids.jpg`.
+
+## Stitch mapping
+
+Every built board (and `stitch.py` output) has `mapping.json` and one `owner_<area>.png` per face, which
+together map each pixel of the unrolled board and its pieces back to a source frame:
+
+- `mapping.json`: per face its layout row, render origin, crop box, placement in the unrolled board (offset,
+  width, x scale of the stretch), height `k`, radial distortion, and per registered frame its full path and
+  homography (undistorted frame px → board units, `k` included); plus `px_per_unit`, the layout settings
+  and the pieces with their x ranges. The `chain` field spells out the order of the steps.
+- `owner_<area>.png`: uint8, full resolution of the face crop; the index of the frame with the largest
+  blending weight at each pixel (the frame the pixel shows), 255 where no frame covers it.
+
+[mapping.py](mapping.py) loads a board and converts points both ways.
+
+## Annotation transfer
+
+[transfer_annotations.py](transfer_annotations.py) moves Supervisely annotations from one stitch of a board
+(A) to another (B) through the source frames: every annotated pixel of A goes to its owner frame, and from
+that frame into B with B's homography of the same frame. Both stitches need their mapping.
+
+```bash
+python -m camera_slider.transfer_annotations transfer \
+    --src_dir <A project>/boards --src_mapping_root <A out_root>/boards \
+    --dst_mapping_root <B out_root>/boards --out_dir <new project>/boards [--src_layout layout.json]
+```
+
+A project whose pieces were edited by hand (camera_slider_KAR, where the spruce narrow faces were moved
+row by row) first needs its layout: `fit-layout --edited_dir <KAR>/boards --builder_dir <builder
+project>/boards --mapping_root <out_root>/boards --out layout.json` fits a translation per piece and face
+row by template matching against the builder pieces, flags rows whose fit is poor (`ok`) and counts
+edited wood not explained by any row (`unexplained_px`). Pass it as `--src_layout` (or `--dst_layout` to
+write into that layout). Gap pixels between rows go to the nearest row.
+
+`transfer_report.csv` has one row per object: lost pixels (no owner in A, frame missing in B, or outside
+B's pieces), components before and after, the B pieces it landed in, and the seam jumps where neighbouring
+pixels of the object come from different frames: `seam_gap_px` (B pulls them apart, a notch where A lost
+wood) and `seam_overlap_px` (B pushes them together, wood that A showed twice). Objects above
+`--max_jump_px`, with lost pixels, more components or an unreliable layout row are `flagged`. Image tags
+are kept for B pieces with the same name as an A piece. `--frames_out` also saves the frame coordinates
+of every annotated pixel per board.
 
 ## Assumptions and limits
 
