@@ -170,7 +170,7 @@ higher is better.
 | 1 | [`17e1310c4e404ff6a3cdea2a43c96f07`](https://dagshub.com/AddictionLord/ct-log.mlflow/#/experiments/4/runs/17e1310c4e404ff6a3cdea2a43c96f07) | M5 recipe; flips and colour jitter | 64 planned, stopped after 18 | 5 | 0.347 | 0.474 | 0.518 | 0.436 | 0.415 |
 | 2 | [`e84875b3078a424ba609f269cf0569da`](https://dagshub.com/AddictionLord/ct-log.mlflow/#/experiments/4/runs/e84875b3078a424ba609f269cf0569da) | Dice term only on tiles where the class is present (`dice_present_only`) | 64 | 24 | 0.696 | 0.690 | 0.779 | 0.695 | 0.777 |
 | **3 (v1)** | [`9d7849ff31fe4752aa4702b309912b36`](https://dagshub.com/AddictionLord/ct-log.mlflow/#/experiments/4/runs/9d7849ff31fe4752aa4702b309912b36) | strong augmentation (`augment_strength` strong) and 32 epochs | 32 | 27 | **0.700** | **0.700** | **0.791** | 0.708 | **0.803** |
-| 4 | [`ce10a131a63344668f467765fe9ae8da`](https://dagshub.com/AddictionLord/ct-log.mlflow/#/experiments/4/runs/ce10a131a63344668f467765fe9ae8da) | run 3 recipe trained on train + val (59 boards) | 32 planned, stopped after 28 | 27 (fixed) | no val score | no val score | no val score | **0.716** | 0.798 |
+| 4 | [`ce10a131a63344668f467765fe9ae8da`](https://dagshub.com/AddictionLord/ct-log.mlflow/#/experiments/4/runs/ce10a131a63344668f467765fe9ae8da) | run 3 recipe trained on train + val (59 boards) | 32 | 27 (run 3's epoch) | no val score | no val score | no val score | **0.716** | 0.798 |
 
 - **Run 1** stopped predicting resin pockets from epoch 7 on (`val/n_pred_resin_pocket` 0). The soft Dice
   was computed per tile and class and averaged over all pairs; resin is present in about 5 % of tiles, so the
@@ -180,10 +180,14 @@ higher is better.
 - **Run 3** adds stronger augmentation (scale 0.8-1.25, rotation ±10°, motion or Gaussian blur, lighting
   gradient, stronger colour jitter, noise) and halves the schedule to 32 epochs because run 2 peaked at
   epoch 24 and then slowly overfit. Two settings changed at once.
-- **Run 4** is run 3's recipe trained on the train and validation boards together (59 boards), stopped
-  after epoch 27, run 3's chosen epoch, since there is no validation set to choose on (MLflow status
-  KILLED). Its MLflow `val/` keys are computed on boards it was trained on and are not a validation score;
-  they are left out of [data/mlflow_runs.json](data/mlflow_runs.json).
+- **Run 4** is run 3's recipe trained on the train and validation boards together (59 boards). With no
+  validation set to choose on, it is evaluated at epoch 27, run 3's chosen epoch. Its MLflow `val/` keys are
+  computed on boards it was trained on and are not a validation score; they are left out of
+  [data/mlflow_runs.json](data/mlflow_runs.json). Epochs 28-31 ran after a resume
+  (run [`8b93deab9c984d44822dbe1c8df971eb`](https://dagshub.com/AddictionLord/ct-log.mlflow/#/experiments/4/runs/8b93deab9c984d44822dbe1c8df971eb),
+  metrics copied into `ce10a131`) that disturbed the evaluated EMA weights: `val/loss` goes from 0.018 at
+  epoch 27 to 0.036 at epoch 28 and `train_eval/inst_iou_knot` from 0.786 at epoch 24 to 0.728 at epoch 28.
+  The cause is not found, so epochs 28-31 are not used.
 
 **Choice: run 3, epoch 27.** Run 3 is ahead of run 2 on validation by 0.010 `inst_iou_defects` and 0.012
 `map50_defects`, and test agrees (+0.012 and +0.026). Run 4 can only be compared on test, where it is mixed
