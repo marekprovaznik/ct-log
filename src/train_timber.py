@@ -288,7 +288,13 @@ def build_dataloaders(config: TimberTrainingConfig) -> Tuple[Dict[str, torch.uti
     """
     common = {"root": config.dataset_root, "min_wood_frac": config.min_wood_frac, "seed": config.seed}
     limit = config.max_tiles_per_split
-    train_ds = TimberTileDataset(split=config.train_split, augment=config.augment, max_tiles=limit, **common)
+    train_ds = TimberTileDataset(
+        split=config.train_split,
+        augment=config.augment,
+        augment_strength=config.augment_strength,
+        max_tiles=limit,
+        **common,
+    )
     eval_limit = min(config.train_eval_tiles, limit) if limit else config.train_eval_tiles
     datasets = {
         "train": train_ds,
@@ -346,7 +352,10 @@ def compute_loss(
     weights = None
     if config.focal_class_weights is not None:
         if len(config.focal_class_weights) != logits.shape[1]:
-            msg = "focal_class_weights has %d entries, model has %d outputs" % (len(config.focal_class_weights), logits.shape[1])
+            msg = "focal_class_weights has %d entries, model has %d outputs" % (
+                len(config.focal_class_weights),
+                logits.shape[1],
+            )
             raise ValueError(msg)
         weights = torch.tensor(config.focal_class_weights)
     focal = masked_focal_loss(

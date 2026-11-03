@@ -30,6 +30,7 @@ class TimberTrainingConfig(BaseModel):
     warmup_epochs: int = Field(0, ge=0)
     ema_decay: Optional[float] = 0.9995
     augment: bool = True
+    augment_strength: Literal["default", "strong"] = "default"
     seed: int = 0
 
     distribution_loss_weight: float = Field(0.4, ge=0)
