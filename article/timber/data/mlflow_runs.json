@@ -99,6 +99,7 @@
    ]
   ],
   "test_per_tile_at_end": {},
+  "last_logged_epoch": 17,
   "best_epoch_smoothed_val": 5,
   "best_smoothed_val/inst_iou_defects": 0.3471,
   "val_at_best_epoch": {
@@ -415,6 +416,7 @@
    "test/map50_defects": 0.7704,
    "test/map50_95_defects": 0.5138
   },
+  "last_logged_epoch": 63,
   "best_epoch_smoothed_val": 24,
   "best_smoothed_val/inst_iou_defects": 0.6956,
   "val_at_best_epoch": {
@@ -604,6 +606,7 @@
    "test/map50_defects": 0.7808,
    "test/map50_95_defects": 0.5159
   },
+  "last_logged_epoch": 31,
   "best_epoch_smoothed_val": 27,
   "best_smoothed_val/inst_iou_defects": 0.7004,
   "val_at_best_epoch": {
@@ -614,7 +617,7 @@
  },
  "ce10a131a63344668f467765fe9ae8da": {
   "run_name": "timber-v1-unet-effv2s-dec512-dicepresent-augstrong-trainval-32ep",
-  "status": "RUNNING",
+  "status": "KILLED",
   "params": {
    "augment": "True",
    "augment_strength": "strong",
@@ -636,117 +639,11 @@
   "tags": {
    "hypothesis": "Adding the 11 val boards to training (48 -> 59 boards) improves test performance of the run-3 recipe",
    "experiment_plan": "CT-17 run 4: run 3 recipe on train+val; stopped after epoch 27 (run 3's smoothed-val peak); test only",
-   "baseline_run_id": "9d7849ff31fe4752aa4702b309912b36"
+   "baseline_run_id": "9d7849ff31fe4752aa4702b309912b36",
+   "stopped_reason": "planned stop after epoch 27 (run 3's smoothed-val peak); evaluated on test from the epoch-27 periodic checkpoint"
   },
-  "val/inst_iou_defects": [
-   [
-    0,
-    0.3001
-   ],
-   [
-    1,
-    0.3342
-   ],
-   [
-    2,
-    0.5186
-   ],
-   [
-    3,
-    0.6358
-   ],
-   [
-    4,
-    0.6801
-   ],
-   [
-    5,
-    0.6809
-   ],
-   [
-    6,
-    0.7069
-   ],
-   [
-    7,
-    0.7105
-   ],
-   [
-    8,
-    0.7074
-   ],
-   [
-    9,
-    0.7137
-   ],
-   [
-    10,
-    0.72
-   ],
-   [
-    11,
-    0.7289
-   ],
-   [
-    12,
-    0.73
-   ],
-   [
-    13,
-    0.7305
-   ],
-   [
-    14,
-    0.7436
-   ],
-   [
-    15,
-    0.7428
-   ],
-   [
-    16,
-    0.7414
-   ],
-   [
-    17,
-    0.7425
-   ],
-   [
-    18,
-    0.7489
-   ],
-   [
-    19,
-    0.7458
-   ],
-   [
-    20,
-    0.7498
-   ],
-   [
-    21,
-    0.7546
-   ],
-   [
-    22,
-    0.7549
-   ],
-   [
-    23,
-    0.7552
-   ],
-   [
-    24,
-    0.7581
-   ]
-  ],
+  "val/inst_iou_defects": "omitted: val boards are in train_split",
   "test_per_tile_at_end": {},
-  "best_epoch_smoothed_val": 24,
-  "best_smoothed_val/inst_iou_defects": 0.7545,
-  "val_at_best_epoch": {
-   "val/inst_iou_knot": 0.7649,
-   "val/inst_iou_resin_pocket": 0.7513,
-   "val/inst_iou_defects": 0.7581
-  }
+  "last_logged_epoch": 27
  }
 }
