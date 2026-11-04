@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import List, Tuple
 
-from camera_slider.stitch_qa import SCALE, Thresholds, classify, evaluate, measure_piece
+from camera_slider.stitch_qa import SCALE, Thresholds, add_stray_origin, classify, evaluate, measure_piece
 import cv2
 import numpy as np
 import pandas as pd
@@ -106,3 +106,21 @@ def test_evaluate_counts_per_type() -> None:
     assert metrics["edge_step"]["fp"] == 1
     assert metrics["face_shift"]["fn"] == 1
     assert metrics["any"]["recall"] == 0.5
+
+
+def test_stray_origin_from_reference() -> None:
+    """A stray absent from the builder piece is a hand edit; one present there is a builder stray."""
+    pieces = pd.DataFrame(
+        {
+            "piece": ["a", "b", "c", "d"],
+            "types": ["stray_segment", "stray_segment", "stray_segment", ""],
+            "evidence": ["x", "y", "z", ""],
+        }
+    )
+    reference = pd.DataFrame({"piece": ["a", "b", "d"], "stray_max_mm2": [0.0, 500.0, 0.0]})
+    out = add_stray_origin(pieces, reference, Thresholds()).set_index("piece")
+    assert out.loc["a", "stray_origin"] == "hand_edit"
+    assert out.loc["b", "stray_origin"] == "builder"
+    assert out.loc["c", "stray_origin"] == "no_reference"
+    assert out.loc["d", "stray_origin"] == ""
+    assert out.loc["a", "evidence"] == "x (origin: hand_edit)"

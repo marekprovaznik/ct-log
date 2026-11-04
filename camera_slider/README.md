@@ -127,6 +127,8 @@ python -m camera_slider.stitch_qa_gallery --qa_dir <out> --pieces_dir <pieces im
 Outputs: `pieces.csv` (all signals, `types`, `score`, `r_<type>` per type, `evidence`), `boards.csv`,
 `summary.json` (counts, thresholds, and per-type precision/recall with `--labels`, a CSV of `piece,types`
 with `;`-separated types and an empty value for clean pieces), and `gallery.html` from the gallery script.
+For an edited copy of a build (e.g. camera_slider_KAR), `--reference_dir <stitch_qa output of the builder
+pieces>` adds `stray_origin`: `builder` when the builder piece has the same stray, `hand_edit` when it does not.
 
 ## Data
 

@@ -76,6 +76,9 @@ def main() -> None:
     parser.add_argument("--px_per_mm", nargs="+", default=["spruce=7.7", "larch=13.7"], help="fallback per species")
     parser.add_argument("--order", default="0123", help="cycle of rows whose bottom edge meets the next row's top edge")
     parser.add_argument("--labels", type=Path, default=None, help="CSV piece,types (';'-separated, empty = clean)")
+    parser.add_argument(
+        "--reference_dir", type=Path, default=None, help="stitch_qa output of the builder pieces, to tell edits apart"
+    )
     parser.add_argument("--workers", type=int, default=8)
     for field in dataclasses.fields(Thresholds):
         parser.add_argument(f"--{field.name}", type=float, default=field.default)
@@ -108,6 +111,8 @@ def run(args: argparse.Namespace) -> None:
             agreement = frame_signals(args.boards_dir, pieces.board.unique(), args, cache)
             pieces = pieces.merge(agreement, on="piece", how="left")
     pieces = classify(pieces, thresholds, rotate_to_zero([int(c) for c in args.order]))
+    if args.reference_dir:
+        pieces = add_stray_origin(pieces, pd.read_csv(args.reference_dir / "pieces.csv"), thresholds)
     boards = board_table(pieces)
     pieces.to_csv(args.out_dir / "pieces.csv", index=False)
     boards.to_csv(args.out_dir / "boards.csv", index=False)
@@ -497,6 +502,22 @@ def order_levels(pieces: pd.DataFrame, expected: str, t: Thresholds) -> pd.DataF
 
 def margins_vs(scores: Dict[str, float], expected: str) -> Dict[str, float]:
     return {k: v - scores[expected] for k, v in scores.items() if k != expected}
+
+
+def add_stray_origin(pieces: pd.DataFrame, reference: pd.DataFrame, t: Thresholds) -> pd.DataFrame:
+    pieces = pieces.copy()
+    ref = reference.set_index("piece").stray_max_mm2
+    flagged = pieces.types.str.split(";").apply(lambda ts: "stray_segment" in ts)
+    in_ref = pieces.piece.isin(ref.index)
+    builder = in_ref & (pieces.piece.map(ref).fillna(0.0) >= t.stray_mm2)
+    pieces["stray_origin"] = ""
+    pieces.loc[flagged & builder, "stray_origin"] = "builder"
+    pieces.loc[flagged & in_ref & ~builder, "stray_origin"] = "hand_edit"
+    pieces.loc[flagged & ~in_ref, "stray_origin"] = "no_reference"
+    pieces.loc[flagged, "evidence"] = pieces.loc[flagged].apply(
+        lambda r: "%s (origin: %s)" % (r.evidence, r.stray_origin), axis=1
+    )
+    return pieces
 
 
 def evidence(row: pd.Series) -> str:
