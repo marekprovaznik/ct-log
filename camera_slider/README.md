@@ -158,9 +158,24 @@ B's pieces), components before and after, the B pieces it landed in, and the sea
 pixels of the object come from different frames: `seam_gap_px` (B pulls them apart, a notch where A lost
 wood) and `seam_overlap_px` (B pushes them together, wood that A showed twice). Objects above
 `--max_jump_px`, with lost pixels, more components, an unreliable layout row or pixels in an
-unexplained box of the edited piece (`unexplained_px`) are `flagged`. Image tags
-are kept for B pieces with the same name as an A piece. `--frames_out` also saves the frame coordinates
-of every annotated pixel per board.
+unexplained box of the edited piece (`unexplained_px`) are `flagged`; `src_object_id` is the object's id
+in A.
+
+Everything of an object except its id (a new upload assigns one) is carried over: class, object tags,
+description, labeler and timestamps, and `smartToolInput` with its crop box and clicks mapped like the
+mask (points no frame covers move with the object's local shift). An object split by a B piece cut
+becomes one object per piece, each with the same tags. Objects of which no pixel reaches B are kept in
+full in `lost_objects.json` with the reason.
+
+Each B piece takes the image tags (`bumaska`, `wrong_stitch`, ...) and description of the A piece its
+wood mostly comes from. `piece_report.csv` lists, per B piece, every A piece it draws from with its share
+and tags; a piece is `flagged` when objects or more than 2 % of its wood come from an A piece with other
+tags, for example an unreviewed neighbour of a reviewed piece. Tags that judge the stitch itself
+(`--stitch_tags`, default `wrong_stitch parovani_ok`) describe A: when B is a different stitch they are
+written as `was_<tag>` (the tag metas are added to the copied `meta.json`) and B needs its own stitch
+check; when B is the same stitch (`same_stitch` in the report, e.g. KAR to the builder layout) they are
+kept as they are. `--frames_out` also saves the frame
+coordinates of every annotated pixel per board.
 
 ## Assumptions and limits
 

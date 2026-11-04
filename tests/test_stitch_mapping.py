@@ -15,7 +15,16 @@ from camera_slider.mapping import (
     write_mapping,
 )
 from camera_slider.registration import Distortion, FrameFit, PassRegistration, undistort_points
-from camera_slider.transfer_annotations import RowShift, builder_to_edited, edited_to_builder, fit_piece, in_boxes
+from camera_slider.transfer_annotations import (
+    RowShift,
+    builder_to_edited,
+    carry_tags,
+    edited_to_builder,
+    fit_piece,
+    in_boxes,
+    piece_provenance,
+    same_stitch,
+)
 import cv2
 import numpy as np
 import pytest
@@ -169,6 +178,38 @@ def test_fit_piece_recovers_row_shift_and_leftover() -> None:
     assert in_boxes(np.array([[25.0, 105.0], [100.0, 20.0]]), fitted["unexplained_boxes"]) == 1
 
 
+def test_piece_provenance_takes_main_source_and_flags_mixed() -> None:
+    """A piece inherits the tags of its main source; objects from a differently tagged neighbour flag it."""
+    pieces = {"b_x0.jpg": {"tags": [{"name": "bumaska"}]}, "b_x9.jpg": {"tags": []}}
+    shares = {"b_x0.jpg": 0.99, "b_x9.jpg": 0.01}
+    records = [{"src_piece": "b_x9.jpg", "dst_pieces": "b_x1.jpg"}]
+    main, row = piece_provenance("b", "b_x1.jpg", shares, pieces, records)
+    assert main == "b_x0.jpg"
+    assert row["tags"] == "bumaska"
+    assert row["objects_from_differently_tagged"] == 1
+    assert row["flagged"]
+    _, clean = piece_provenance("b", "b_x1.jpg", shares, pieces, [])
+    assert not clean["flagged"]
+
+
+def test_stitch_tags_become_history_on_a_new_stitch() -> None:
+    """Stitch-judging tags move to was_<tag> on a different stitch and stay as they are on the same one."""
+    tags = [{"name": "bumaska", "tagId": 1}, {"name": "wrong_stitch", "tagId": 2, "labelerLogin": "UNOD"}]
+    assert carry_tags(tags, ["wrong_stitch"], same=True) == tags
+    moved = carry_tags(tags, ["wrong_stitch"], same=False)
+    assert moved[0] == tags[0]
+    assert moved[1] == {"name": "was_wrong_stitch", "labelerLogin": "UNOD"}
+
+
+def test_same_stitch_detects_changed_homography(stitched: Dict) -> None:
+    """A mapping is the same stitch as itself, not after one frame moves."""
+    board = load_mapping(stitched["dir"])
+    other = load_mapping(stitched["dir"])
+    assert same_stitch(board, other)
+    other.faces[0].frames[0].homography = other.faces[0].frames[0].homography + 1e-6
+    assert not same_stitch(board, other)
+
+
 def _texture(rng: np.random.Generator, height: int) -> np.ndarray:
     noise = cv2.GaussianBlur(rng.uniform(0, 255, (height, 300)), (0, 0), 4)
     return np.clip((noise - 127) * 10 + 140, 40, 255).astype(np.uint8)
@@ -177,6 +218,14 @@ def _texture(rng: np.random.Generator, height: int) -> np.ndarray:
 def _face(row: int, y: int, height: int) -> FaceMap:
     distortion = Distortion(0.0, 0.0, (0.0, 0.0), 1.0)
     return FaceMap(
-        str(row), row, (0.0, 0.0), (0, 0, 300, height), FacePlacement(0, y, 300, height, 1.0), 1.0, 1.0, distortion,
-        [], np.zeros((height, 300), np.uint8),
+        str(row),
+        row,
+        (0.0, 0.0),
+        (0, 0, 300, height),
+        FacePlacement(0, y, 300, height, 1.0),
+        1.0,
+        1.0,
+        distortion,
+        [],
+        np.zeros((height, 300), np.uint8),
     )

@@ -217,11 +217,17 @@ def frame_to_crop(face: FaceMap, raw: np.ndarray, frame: FrameMap) -> np.ndarray
     return (board - np.array(face.origin)) * face.px_per_unit - np.array(face.crop_box[:2])
 
 
-def distort_points(pts: np.ndarray, distortion: Distortion, iterations: int = 20) -> np.ndarray:
+def distort_points(
+    pts: np.ndarray, distortion: Distortion, iterations: int = 20, tolerance_px: float = 1e-7
+) -> np.ndarray:
     centre = np.array(distortion.centre, np.float64)
     rel = pts - centre
     source = rel.copy()
     for _ in range(iterations):
-        s = (source**2).sum(1) / distortion.radius**2
-        source = rel / (1 + distortion.k1 * s + distortion.k2 * s**2)[:, None]
+        s = (source[:, 0] * source[:, 0] + source[:, 1] * source[:, 1]) / distortion.radius**2
+        new = rel / (1 + distortion.k1 * s + distortion.k2 * s**2)[:, None]
+        step = np.abs(new - source).max() if len(new) else 0.0
+        source = new
+        if step < tolerance_px:
+            break
     return source + centre

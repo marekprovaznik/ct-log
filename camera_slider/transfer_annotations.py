@@ -5,7 +5,6 @@ import dataclasses
 import json
 import logging
 from pathlib import Path
-import shutil
 from typing import Dict, List, Optional, Tuple
 
 from ann_pipeline.timber.data import decode_bitmap
@@ -35,7 +34,11 @@ FIT_REFINE_PX = 8
 FIT_SCALE = 4
 WOOD_GRAY = 20
 WOOD_ROW_FRACTION = 0.1
-DROP_FIELDS = ("id", "smartToolInput", "objectId")
+DROP_FIELDS = ("id",)
+SHARE_STEP_PX = 8
+CHUNK_PX = 1_000_000
+SHIFT_SAMPLE_STEP = 97
+MAX_FOREIGN_SHARE = 0.02
 
 
 @dataclasses.dataclass
@@ -80,6 +83,12 @@ def main() -> None:
     move.add_argument("--boards", nargs="*", default=None)
     move.add_argument("--max_jump_px", type=float, default=1.5, help="seam jump above which an object is flagged")
     move.add_argument("--workers", type=int, default=8)
+    move.add_argument(
+        "--stitch_tags",
+        nargs="*",
+        default=["wrong_stitch", "parovani_ok"],
+        help="image tags that judge the stitch; moved to was_<tag> when B is a different stitch",
+    )
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     if args.command == "fit-layout":
@@ -155,21 +164,29 @@ def transfer(args: argparse.Namespace) -> None:
     (args.out_dir / "ann").mkdir(parents=True, exist_ok=True)
     meta = args.src_dir.parent / "meta.json"
     if meta.exists():
-        shutil.copyfile(meta, args.out_dir.parent / "meta.json")
+        (args.out_dir.parent / "meta.json").write_text(json.dumps(with_history_tags(meta, args.stitch_tags), indent=1))
     if args.frames_out is not None:
         args.frames_out.mkdir(parents=True, exist_ok=True)
     jobs = [(board, pieces, src_layout, dst_layout, src_boxes, args) for board, pieces in sorted(anns.items())]
     with ProcessPoolExecutor(args.workers) as pool:
         results = list(pool.map(_transfer_board, jobs))
-    records = [r for board_records in results for r in board_records]
+    records = [r for board_records, _, _ in results for r in board_records]
+    piece_rows = [r for _, board_pieces, _ in results for r in board_pieces]
+    lost = [o for _, _, board_lost in results for o in board_lost]
     write_report(args.out_dir / "transfer_report.csv", records)
+    write_report(args.out_dir / "piece_report.csv", piece_rows)
+    (args.out_dir / "lost_objects.json").write_text(json.dumps(lost, indent=1))
     flagged = [r for r in records if r["flagged"]]
     LOGGER.info(
-        "%d boards, %d objects moved, %d flagged (seam jump > %.1f px, lost pixels or unreliable layout)",
+        "%d boards, %d objects moved, %d flagged (seam jump > %.1f px, lost pixels or unreliable layout), "
+        "%d lost entirely, %d of %d pieces with mixed sources flagged",
         len(results),
         len(records),
         len(flagged),
         args.max_jump_px,
+        len(lost),
+        sum(r["flagged"] for r in piece_rows),
+        len(piece_rows),
     )
 
 
@@ -180,12 +197,14 @@ def transfer_board(
     dst_layout: Dict[str, List[RowShift]],
     src_boxes: Dict[str, List[List[int]]],
     args: argparse.Namespace,
-) -> List[Dict]:
+) -> Tuple[List[Dict], List[Dict], List[Dict]]:
     src = load_mapping(args.src_mapping_root / board)
     dst = load_mapping(args.dst_mapping_root / board)
     out = {p["name"]: [] for p in dst.pieces}
-    tags = {name: pieces[name]["tags"] for name in out if name in pieces}
+    sources = piece_sources(src, dst)
+    same = same_stitch(src, dst)
     records = []
+    lost = []
     saved: Dict[str, List] = {"obj": [], "gid": [], "raw": []}
     objects_meta = []
     for piece_name, ann in sorted(pieces.items()):
@@ -193,26 +212,25 @@ def transfer_board(
         x0 = src.piece(piece_name)["x0"]
         for obj in ann["objects"]:
             mask, origin = object_mask(obj, (ann["size"]["height"], ann["size"]["width"]))
-            ys, xs = np.nonzero(mask)
-            pix = np.stack([xs + origin[0], ys + origin[1]], 1).astype(np.float64)
-            samples = (pix[:, None, :] + SUBSAMPLES[None]).reshape(-1, 2)
-            frames = to_frames(src, shifts, x0, samples)
-            names, dst_pts, dst_unrolled = from_frames(dst, dst_layout, frames)
+            moved = move_object(mask, origin, src, shifts, x0, dst, dst_layout, src_boxes.get(piece_name, []))
             record = {
                 "board": board,
                 "src_piece": piece_name,
+                "src_object_id": obj.get("id"),
                 "class": obj["classTitle"],
                 "geometry": obj["geometryType"],
-                "src_px": int(len(pix)),
-                "lost_src_px": int(frames.lost_src.reshape(-1, len(SUBSAMPLES))[:, 0].sum()),
+                "src_px": moved.src_px,
+                "lost_src_px": moved.lost_src_px,
                 "layout_ok": all(s.ok for s in shifts),
-                "unexplained_px": in_boxes(pix, src_boxes.get(piece_name, [])),
+                "unexplained_px": moved.unexplained_px,
+                **moved.seams,
             }
-            record.update(
-                seam_jumps(pix, frames.gid.reshape(-1, len(SUBSAMPLES))[:, 0], dst_unrolled[:: len(SUBSAMPLES)])
-            )
-            placed = place_objects(obj, names, dst_pts, dst, out)
+            smart = map_smart_input(obj, src, shifts, x0, dst, dst_layout, moved.shifts)
+            placed = place_objects(obj, moved.patches, out, smart)
+            placed["lost_dst_px"] = moved.lost_dst_px
             record.update(placed)
+            if not placed["dst_pieces"]:
+                lost.append({"board": board, "src_piece": piece_name, "reason": "no pixel maps into B", "object": obj})
             record["src_components"] = n_components(mask)
             record["flagged"] = bool(
                 record["lost_src_px"]
@@ -225,15 +243,18 @@ def transfer_board(
             )
             records.append(record)
             if args.frames_out is not None:
-                centre = frames.gid.reshape(-1, len(SUBSAMPLES))[:, 0]
-                saved["obj"].append(np.full(len(centre), len(objects_meta), np.int32))
-                saved["gid"].append(centre.astype(np.int16))
-                saved["raw"].append(frames.raw.reshape(-1, len(SUBSAMPLES), 2)[:, 0].astype(np.float32))
-                objects_meta.append({"src_piece": piece_name, **_clean(obj)})
+                saved["obj"].append(np.full(len(moved.centre_gid), len(objects_meta), np.int32))
+                saved["gid"].append(moved.centre_gid.astype(np.int16))
+                saved["raw"].append(moved.centre_raw.astype(np.float32))
+                objects_meta.append({"src_piece": piece_name, "object": obj})
+    piece_rows = []
     for p in dst.pieces:
+        main, row = piece_provenance(board, p["name"], sources[p["name"]], pieces, records)
+        row["same_stitch"] = same
+        piece_rows.append(row)
         ann = {
-            "description": "",
-            "tags": tags.get(p["name"], []),
+            "description": pieces[main].get("description", "") if main in pieces else "",
+            "tags": carry_tags(pieces[main]["tags"], args.stitch_tags, same) if main in pieces else [],
             "size": {"height": dst.unrolled_shape[0], "width": p["x1"] - p["x0"]},
             "objects": out[p["name"]],
         }
@@ -246,7 +267,109 @@ def transfer_board(
         )
         (args.frames_out / f"{board}.objects.json").write_text(json.dumps(objects_meta))
     LOGGER.info("%s: %d objects", board, len(records))
-    return records
+    return records, piece_rows, lost
+
+
+def same_stitch(src: BoardMap, dst: BoardMap) -> bool:
+    if src.unrolled_shape != dst.unrolled_shape or len(src.faces) != len(dst.faces):
+        return False
+    for a, b in zip(src.faces, dst.faces):
+        if (a.area, a.crop_box, a.origin, a.placement, a.px_per_unit) != (
+            b.area,
+            b.crop_box,
+            b.origin,
+            b.placement,
+            b.px_per_unit,
+        ):
+            return False
+        if [frame_key(f.path) for f in a.frames] != [frame_key(f.path) for f in b.frames]:
+            return False
+        if any(not np.allclose(fa.homography, fb.homography, rtol=0, atol=1e-12) for fa, fb in zip(a.frames, b.frames)):
+            return False
+    return True
+
+
+def carry_tags(tags: List[Dict], stitch_tags: List[str], same: bool) -> List[Dict]:
+    if same:
+        return tags
+    out = []
+    for tag in tags:
+        if tag["name"] in stitch_tags:
+            tag = {k: v for k, v in tag.items() if k != "tagId"}
+            tag["name"] = f"was_{tag['name']}"
+        out.append(tag)
+    return out
+
+
+def with_history_tags(meta_path: Path, stitch_tags: List[str]) -> Dict:
+    meta = json.loads(meta_path.read_text())
+    names = {t["name"] for t in meta.get("tags", [])}
+    for tag in list(meta.get("tags", [])):
+        if tag["name"] in stitch_tags and f"was_{tag['name']}" not in names:
+            history = {k: v for k, v in tag.items() if k not in ("id", "hotkey")}
+            history["name"] = f"was_{tag['name']}"
+            meta["tags"].append(history)
+    return meta
+
+
+def piece_sources(src: BoardMap, dst: BoardMap) -> Dict[str, Dict[str, float]]:
+    shares = {}
+    for piece in dst.pieces:
+        xs = np.arange(0, piece["x1"] - piece["x0"], SHARE_STEP_PX)
+        grids = []
+        for face in dst.faces:
+            ys = np.arange(face.placement.y, face.placement.y + face.placement.height, SHARE_STEP_PX)
+            grids.append(np.stack(np.meshgrid(xs, ys), -1).reshape(-1, 2))
+        names, _, _ = from_frames(src, {}, to_frames(dst, [], piece["x0"], np.concatenate(grids).astype(np.float64)))
+        names = names[names != ""]
+        shares[piece["name"]] = {n: float(np.mean(names == n)) for n in sorted(set(names))}
+    return shares
+
+
+def piece_provenance(
+    board: str, name: str, shares: Dict[str, float], pieces: Dict[str, Dict], records: List[Dict]
+) -> Tuple[Optional[str], Dict]:
+    main = max(shares, key=shares.get) if shares else None
+    tag_names = {n: sorted(t["name"] for t in pieces[n]["tags"]) if n in pieces else None for n in shares}
+    foreign = [n for n in shares if n != main and tag_names[n] != tag_names.get(main)]
+    foreign_objects = sum(r["src_piece"] in foreign and name in r["dst_pieces"].split() for r in records)
+    row = {
+        "board": board,
+        "dst_piece": name,
+        "main_src_piece": main or "",
+        "main_share": round(shares.get(main, 0.0), 4),
+        "tags": " ".join(tag_names.get(main) or []),
+        "sources": " ".join(f"{n}:{shares[n]:.4f}:{'+'.join(tag_names[n] or ['-'])}" for n in shares),
+        "objects_from_differently_tagged": foreign_objects,
+        "flagged": bool(foreign_objects or sum(shares[n] for n in foreign) > MAX_FOREIGN_SHARE),
+    }
+    return main, row
+
+
+def map_smart_input(
+    obj: Dict,
+    src: BoardMap,
+    shifts: List[RowShift],
+    x0: int,
+    dst: BoardMap,
+    dst_layout: Dict[str, List[RowShift]],
+    part_shifts: Dict[str, np.ndarray],
+) -> Dict[str, Dict]:
+    smart = obj.get("smartToolInput")
+    keys = [k for k in ("crop", "positive", "negative") if smart and smart.get(k)]
+    if not keys:
+        return {}
+    pts = np.array([q for k in keys for q in smart[k]], np.float64).reshape(-1, 2)
+    point_names, mapped, _ = from_frames(dst, dst_layout, to_frames(src, shifts, x0, pts))
+    out = {}
+    for name, shift in part_shifts.items():
+        moved = np.where((point_names == name)[:, None], mapped, pts + shift)
+        new, i = dict(smart), 0
+        for k in keys:
+            new[k] = moved[i : i + len(smart[k])].round(3).tolist()
+            i += len(smart[k])
+        out[name] = new
+    return out
 
 
 def to_frames(board: BoardMap, shifts: List[RowShift], x0: int, pts: np.ndarray) -> FramePoints:
@@ -260,8 +383,10 @@ def to_frames(board: BoardMap, shifts: List[RowShift], x0: int, pts: np.ndarray)
     for k, face in enumerate(board.faces):
         sel = np.nonzero(rows == k)[0]
         own = owners(face, crop[sel])
-        for index in np.unique(own[own != NO_OWNER]):
-            hit = sel[own == index]
+        for index, part in _groups(own):
+            if index == NO_OWNER:
+                continue
+            hit = sel[part]
             raw[hit] = crop_to_frame(face, crop[hit], face.frames[index])
             gid[hit] = offsets[k] + index
     return FramePoints(paths, gid, raw, gid < 0)
@@ -270,15 +395,22 @@ def to_frames(board: BoardMap, shifts: List[RowShift], x0: int, pts: np.ndarray)
 def from_frames(
     board: BoardMap, layout: Dict[str, List[RowShift]], frames: FramePoints
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    which, pts, unrolled = from_frames_index(board, layout, frames)
+    names = np.array([""] + [p["name"] for p in board.pieces], dtype=object)[which + 1]
+    return names, pts, unrolled
+
+
+def from_frames_index(
+    board: BoardMap, layout: Dict[str, List[RowShift]], frames: FramePoints
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     lookup = board.frame_index()
     unrolled = np.full((len(frames.gid), 2), np.nan)
     rows = np.full(len(frames.gid), -1)
-    for gid in np.unique(frames.gid[frames.gid >= 0]):
-        path = frame_key(frames.paths[gid])
+    for gid, hit in _groups(frames.gid):
+        path = frame_key(frames.paths[gid]) if gid >= 0 else None
         if path not in lookup:
             continue
         k, index = lookup[path]
-        hit = frames.gid == gid
         face = board.faces[k]
         unrolled[hit] = face_to_unrolled(face, frame_to_crop(face, frames.raw[hit], face.frames[index]))
         rows[hit] = k
@@ -288,14 +420,20 @@ def from_frames(
     rx = np.where(valid, np.round(np.nan_to_num(unrolled[:, 0])), -1)
     which = np.searchsorted(starts, rx, side="right") - 1
     valid &= (which >= 0) & (rx < ends[np.clip(which, 0, None)])
-    names = np.array([""] * len(rows), dtype=object)
+    which[~valid] = -1
     pts = np.full_like(unrolled, np.nan)
-    for w in np.unique(which[valid]):
+    for w, hit in _groups(which):
+        if w < 0:
+            continue
         name = board.pieces[w]["name"]
-        hit = valid & (which == w)
-        names[hit] = name
         pts[hit] = builder_to_edited(layout.get(name, []), rows[hit], unrolled[hit] - np.array([starts[w], 0.0]))
-    return names, pts, unrolled
+    return which, pts, unrolled
+
+
+def _groups(labels: np.ndarray) -> List[Tuple[int, np.ndarray]]:
+    order = np.argsort(labels, kind="stable")
+    values, starts = np.unique(labels[order], return_index=True)
+    return list(zip(values.tolist(), np.split(order, starts[1:])))
 
 
 def edited_to_builder(shifts: List[RowShift], pts: np.ndarray) -> Tuple[Optional[np.ndarray], np.ndarray]:
@@ -317,71 +455,153 @@ def builder_to_edited(shifts: List[RowShift], rows: np.ndarray, pts: np.ndarray)
     return pts + move
 
 
-def seam_jumps(pix: np.ndarray, gid: np.ndarray, dst: np.ndarray) -> Dict:
-    index = {(int(x), int(y)): i for i, (x, y) in enumerate(pix)}
-    gaps, overlaps, jumps = [0.0], [0.0], [0.0]
-    n_pairs = 0
-    for step, axis in (((1, 0), 0), ((0, 1), 1)):
-        a, b = [], []
-        for (x, y), i in index.items():
-            j = index.get((x + step[0], y + step[1]))
-            if j is not None:
-                a.append(i)
-                b.append(j)
-        if not a:
-            continue
-        a, b = np.array(a), np.array(b)
-        ok = np.isfinite(dst[a, 0]) & np.isfinite(dst[b, 0])
-        a, b = a[ok], b[ok]
-        delta = dst[b] - dst[a]
-        same = gid[a] == gid[b]
-        expected = np.median(delta[same], 0) if same.any() else np.array(step, np.float64)
-        cross = ~same
-        n_pairs += int(cross.sum())
-        if cross.any():
-            off = delta[cross] - expected
-            gaps.append(float(off[:, axis].max()))
-            overlaps.append(float(-off[:, axis].min()))
-            jumps.append(float(np.linalg.norm(off, axis=1).max()))
-    return {
-        "seam_pairs": n_pairs,
-        "seam_jump_px": round(max(jumps), 3),
-        "seam_gap_px": round(max(gaps), 3),
-        "seam_overlap_px": round(max(overlaps), 3),
-    }
+@dataclasses.dataclass
+class MovedObject:
+    src_px: int
+    lost_src_px: int
+    lost_dst_px: int
+    unexplained_px: int
+    seams: Dict
+    patches: Dict[str, Tuple[np.ndarray, np.ndarray]]
+    shifts: Dict[str, np.ndarray]
+    centre_gid: np.ndarray
+    centre_raw: np.ndarray
 
 
-def place_objects(obj: Dict, names: np.ndarray, pts: np.ndarray, board: BoardMap, out: Dict[str, List]) -> Dict:
+def move_object(
+    mask: np.ndarray,
+    origin: Tuple[int, int],
+    src: BoardMap,
+    shifts: List[RowShift],
+    x0: int,
+    dst: BoardMap,
+    dst_layout: Dict[str, List[RowShift]],
+    boxes: List[List[int]],
+) -> MovedObject:
+    h, w = mask.shape
     n = len(SUBSAMPLES)
-    lost = names.reshape(-1, n)[:, 0] == ""
-    height = board.unrolled_shape[0]
+    rows = max(1, CHUNK_PX // max(w, 1))
+    canvases: Dict[str, List] = {}
+    moves: Dict[str, List[np.ndarray]] = {}
+    seams = SeamStats()
+    counts = {"src": 0, "lost_src": 0, "lost_dst": 0, "unexplained": 0}
+    centre_gid, centre_raw = [], []
+    for r0 in range(0, h, rows):
+        r1 = min(h, r0 + rows)
+        ys, xs = np.nonzero(mask[r0 : min(h, r1 + 1)])
+        if len(xs) == 0:
+            continue
+        pix = np.stack([xs + origin[0], ys + r0 + origin[1]], 1).astype(np.float64)
+        core = ys + r0 < r1
+        frames = to_frames(src, shifts, x0, (pix[:, None, :] + SUBSAMPLES[None]).reshape(-1, 2))
+        which, pts, unrolled = from_frames_index(dst, dst_layout, frames)
+        gid = frames.gid.reshape(-1, n)[:, 0]
+        seams.add(ys, xs, r1 - r0, gid, unrolled[::n], mask.shape[1])
+        keep = np.repeat(core, n)
+        which, pts, samples = which[keep], pts[keep], (pix[:, None, :] + SUBSAMPLES[None]).reshape(-1, 2)[keep]
+        counts["src"] += int(core.sum())
+        counts["lost_src"] += int(frames.lost_src.reshape(-1, n)[core, 0].sum())
+        counts["lost_dst"] += int((which.reshape(-1, n)[:, 0] < 0).sum())
+        counts["unexplained"] += in_boxes(pix[core], boxes)
+        centre_gid.append(gid[core])
+        centre_raw.append(frames.raw.reshape(-1, n, 2)[core, 0])
+        for index, hit in _groups(which):
+            if index < 0:
+                continue
+            piece = dst.pieces[index]
+            name = piece["name"]
+            if name not in canvases:
+                canvases[name] = [np.zeros((dst.unrolled_shape[0], piece["x1"] - piece["x0"]), bool), None, None]
+            canvas = canvases[name]
+            q = np.round(pts[hit]).astype(np.int64)
+            inside = (q[:, 0] >= 0) & (q[:, 0] < canvas[0].shape[1]) & (q[:, 1] >= 0) & (q[:, 1] < canvas[0].shape[0])
+            q = q[inside]
+            if len(q):
+                canvas[0][q[:, 1], q[:, 0]] = True
+                lo, hi = q.min(0), q.max(0)
+                canvas[1] = lo if canvas[1] is None else np.minimum(canvas[1], lo)
+                canvas[2] = hi if canvas[2] is None else np.maximum(canvas[2], hi)
+            moves.setdefault(name, []).append((pts[hit] - samples[hit])[::SHIFT_SAMPLE_STEP])
+    return MovedObject(
+        counts["src"],
+        counts["lost_src"],
+        counts["lost_dst"],
+        counts["unexplained"],
+        seams.result(),
+        {
+            name: (img[lo[1] : hi[1] + 1, lo[0] : hi[0] + 1].copy(), lo)
+            for name, (img, lo, hi) in canvases.items()
+            if lo is not None
+        },
+        {name: np.median(np.concatenate(m), 0) for name, m in moves.items()},
+        np.concatenate(centre_gid) if centre_gid else np.zeros(0, np.int64),
+        np.concatenate(centre_raw) if centre_raw else np.zeros((0, 2)),
+    )
+
+
+class SeamStats:
+    def __init__(self) -> None:
+        self.pairs = 0
+        self.gap = 0.0
+        self.overlap = 0.0
+        self.jump = 0.0
+
+    def add(self, ys: np.ndarray, xs: np.ndarray, core_rows: int, gid: np.ndarray, dst: np.ndarray, w: int) -> None:
+        h = max(int(ys.max()) + 1, core_rows)
+        gid_img = np.full((h + 1, w), -2, np.int64)
+        pos = np.full((h + 1, w, 2), np.nan)
+        gid_img[ys, xs] = gid
+        pos[ys, xs] = dst
+        pairs = (
+            (gid_img[:core_rows, :-1], gid_img[:core_rows, 1:], pos[:core_rows, :-1], pos[:core_rows, 1:]),
+            (gid_img[:core_rows], gid_img[1 : core_rows + 1], pos[:core_rows], pos[1 : core_rows + 1]),
+        )
+        for axis, (ga, gb, pa, pb) in enumerate(pairs):
+            if ga.size == 0:
+                continue
+            valid = (ga > -2) & (gb > -2) & np.isfinite(pa[..., 0]) & np.isfinite(pb[..., 0])
+            delta = (pb - pa)[valid]
+            same = (ga == gb)[valid]
+            expected = np.median(delta[same], 0) if same.any() else np.eye(2)[axis]
+            cross = ~same
+            self.pairs += int(cross.sum())
+            if cross.any():
+                off = delta[cross] - expected
+                self.gap = max(self.gap, float(off[:, axis].max()))
+                self.overlap = max(self.overlap, float(-off[:, axis].min()))
+                self.jump = max(self.jump, float(np.linalg.norm(off, axis=1).max()))
+
+    def result(self) -> Dict:
+        return {
+            "seam_pairs": self.pairs,
+            "seam_jump_px": round(self.jump, 3),
+            "seam_gap_px": round(self.gap, 3),
+            "seam_overlap_px": round(self.overlap, 3),
+        }
+
+
+def place_objects(
+    obj: Dict, patches: Dict[str, Tuple[np.ndarray, np.ndarray]], out: Dict[str, List], smart: Dict[str, Dict]
+) -> Dict:
     pieces = []
     dst_px = 0
     components = 0
-    for name in sorted(set(names[names != ""])):
-        width = board.piece(name)["x1"] - board.piece(name)["x0"]
-        p = np.round(pts[names == name]).astype(int)
-        keep = (p[:, 0] >= 0) & (p[:, 0] < width) & (p[:, 1] >= 0) & (p[:, 1] < height)
-        p = np.unique(p[keep], axis=0)
-        if len(p) == 0:
-            continue
-        mask = np.zeros((height, width), bool)
-        mask[p[:, 1], p[:, 0]] = True
+    for name in sorted(patches):
+        patch, lo = patches[name]
         new = _clean(obj)
+        if name in smart:
+            new["smartToolInput"] = smart[name]
         if obj["geometryType"] == "rectangle":
-            new["points"] = {"exterior": [p.min(0).tolist(), p.max(0).tolist()], "interior": []}
+            new["points"] = {"exterior": [lo.tolist(), (lo + patch.shape[::-1] - 1).tolist()], "interior": []}
         else:
-            new["bitmap"] = bitmap_with_origin(mask)
+            bitmap = bitmap_with_origin(patch)
+            bitmap["origin"] = [int(lo[0]) + bitmap["origin"][0], int(lo[1]) + bitmap["origin"][1]]
+            new["bitmap"] = bitmap
         out[name].append(new)
         pieces.append(name)
-        dst_px += int(mask.sum())
-        components += n_components(mask)
-    return {
-        "dst_pieces": " ".join(pieces),
-        "dst_px": dst_px,
-        "lost_dst_px": int(lost.sum()),
-        "dst_components": components,
-    }
+        dst_px += int(patch.sum())
+        components += n_components(patch)
+    return {"dst_pieces": " ".join(pieces), "dst_px": dst_px, "dst_components": components}
 
 
 def object_mask(obj: Dict, size: Tuple[int, int]) -> Tuple[np.ndarray, Tuple[int, int]]:
@@ -473,12 +693,12 @@ def _fit_piece(job: Tuple[str, Path, Path, Path], max_mad: float) -> Tuple[str, 
     return name, fit_piece(edited, builder, load_mapping(board_dir), max_mad)
 
 
-def _transfer_board(job: Tuple) -> List[Dict]:
+def _transfer_board(job: Tuple) -> Tuple[List[Dict], List[Dict], List[Dict]]:
     return transfer_board(*job)
 
 
 def _clean(obj: Dict) -> Dict:
-    return {k: v for k, v in obj.items() if k not in DROP_FIELDS and k not in ("bitmap", "points")}
+    return {k: v for k, v in obj.items() if k not in DROP_FIELDS and k not in ("bitmap", "points", "smartToolInput")}
 
 
 if __name__ == "__main__":
