@@ -122,7 +122,7 @@ python -m camera_slider.stitch_qa_gallery --qa_dir <out> --pieces_dir <pieces im
 | `stray_segment` | Wood component outside every face (a sliver or an extra segment). |
 | `edge_step` | Step in a face's top or bottom edge, typically the adjacent face leaking into the face mask. |
 | `face_shift` | Faces misaligned along the board: consistent x offset of knots paired with `knot_id` across faces (needs annotations). |
-| `bad_seam` | Frames disagree inside a face: worst tie-point seam of the frames in the piece (`report.json` + `mapping.json`) or uncovered columns. |
+| `bad_seam` | Frames disagree inside a face: worst tie-point seam of the frames in the piece (`report.json` + `mapping.json`) or uncovered columns. Boards without `mapping.json` get the board's worst seam for every piece (`seam_scope = board`) and no frame agreement; both are logged as warnings. |
 
 Evidence-only columns, not used for the types because their hits on KAR were not confirmed by a visual
 check: `shift_med_mm` (lag of the edge profiles of adjacent faces; two-face boards: dark-spot profiles of

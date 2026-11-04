@@ -381,12 +381,22 @@ def report_signals(boards_dir: Path, pieces: List[str]) -> pd.DataFrame:
             "board_seam_max_px": round(max(f["seam_max_px"] for f in report["faces"]), 2),
             "uncovered_columns": int(sum(f["uncovered_columns"] for f in report["faces"])),
         }
-        per_piece = {p["name"][:-4]: {"seam_max_px": np.nan, "flagged_frames": 0} for p in report["pieces"]}
+        per_piece = {
+            p["name"][:-4]: {"seam_max_px": np.nan, "flagged_frames": 0, "seam_scope": "piece"}
+            for p in report["pieces"]
+        }
         if mapping_path.exists():
             for name, seam, flagged in frame_pieces(report, load_json(mapping_path)):
                 entry = per_piece[name]
                 entry["seam_max_px"] = round(np.nanmax([entry["seam_max_px"], seam]), 2)
                 entry["flagged_frames"] += int(flagged)
+        else:
+            LOGGER.warning("%s has no mapping.json: piece seams use the board maximum, no frame agreement", board)
+            flagged = sum(len(f["flagged_frames"]) for f in report["faces"])
+            for entry in per_piece.values():
+                entry.update(
+                    {"seam_max_px": board_row["board_seam_max_px"], "flagged_frames": flagged, "seam_scope": "board"}
+                )
         for name, entry in per_piece.items():
             rows.append({"piece": name, **board_row, **entry})
     return pd.DataFrame(rows)
@@ -415,6 +425,9 @@ def frame_centre_x(mapping: Dict, face: Dict, frame: Dict) -> float:
 
 def frame_signals(boards_dir: Path, boards: List[str], args: argparse.Namespace, cache: Path) -> pd.DataFrame:
     cache.mkdir(parents=True, exist_ok=True)
+    missing = [b for b in sorted(boards) if not (boards_dir / b / "mapping.json").exists()]
+    if missing:
+        LOGGER.warning("No frame agreement for %d boards without mapping.json: %s", len(missing), " ".join(missing))
     jobs = [
         (boards_dir / b, args.raw_root, args.raw_prefix, cache / f"{b}.json")
         for b in sorted(boards)
@@ -539,7 +552,10 @@ def evidence(row: pd.Series) -> str:
             % (row.knot_dx_med_mm, row.knot_dx_mad_mm, row.knot_pairs)
         )
     if "bad_seam" in types:
-        parts.append("tie seam max %.2f px, uncovered columns %s" % (row.seam_max_px, row.uncovered_columns))
+        parts.append(
+            "tie seam max %.2f px (%s level), uncovered columns %s"
+            % (row.seam_max_px, row.seam_scope, row.uncovered_columns)
+        )
     return " | ".join(parts)
 
 

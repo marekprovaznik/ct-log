@@ -1,7 +1,16 @@
+import json
 from pathlib import Path
 from typing import List, Tuple
 
-from camera_slider.stitch_qa import SCALE, Thresholds, add_stray_origin, classify, evaluate, measure_piece
+from camera_slider.stitch_qa import (
+    SCALE,
+    Thresholds,
+    add_stray_origin,
+    classify,
+    evaluate,
+    measure_piece,
+    report_signals,
+)
 import cv2
 import numpy as np
 import pandas as pd
@@ -124,3 +133,22 @@ def test_stray_origin_from_reference() -> None:
     assert out.loc["c", "stray_origin"] == "no_reference"
     assert out.loc["d", "stray_origin"] == ""
     assert out.loc["a", "evidence"] == "x (origin: hand_edit)"
+
+
+def test_report_signals_without_mapping_use_board_seam(tmp_path: Path) -> None:
+    """Without mapping.json every piece gets the board's worst seam, marked as board level."""
+    board = tmp_path / "spruce_001"
+    board.mkdir()
+    report = {
+        "face_stretch": {"A": 1.0, "B": 1.0},
+        "faces": [
+            {"seam_max_px": 1.2, "uncovered_columns": 0, "flagged_frames": []},
+            {"seam_max_px": 4.1, "uncovered_columns": 0, "flagged_frames": ["IMG_1.JPG"]},
+        ],
+        "pieces": [{"name": "spruce_001_x00000.jpg"}, {"name": "spruce_001_x08000.jpg"}],
+    }
+    (board / "report.json").write_text(json.dumps(report))
+    rows = report_signals(tmp_path, ["spruce_001_x00000", "spruce_001_x08000"]).set_index("piece")
+    assert rows.seam_max_px.tolist() == [4.1, 4.1]
+    assert rows.seam_scope.tolist() == ["board", "board"]
+    assert rows.flagged_frames.tolist() == [1, 1]
