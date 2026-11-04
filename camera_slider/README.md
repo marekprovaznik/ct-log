@@ -172,7 +172,7 @@ wood mostly comes from. `piece_report.csv` lists, per B piece, every A piece it 
 and tags; a piece is `flagged` when objects or more than 2 % of its wood come from an A piece with other
 tags, for example an unreviewed neighbour of a reviewed piece. Tags that judge the stitch itself
 (`--stitch_tags`, default `wrong_stitch parovani_ok`) describe A: when B is a different stitch they are
-written as `was_<tag>` (the tag metas are added to the copied `meta.json`) and B needs its own stitch
+written as `was_<tag>`, on pieces and on objects alike (the tag metas are added to the copied `meta.json`) and B needs its own stitch
 check; when B is the same stitch (`same_stitch` in the report, e.g. KAR to the builder layout) they are
 kept as they are. `--frames_out` also saves the frame
 coordinates of every annotated pixel per board.
