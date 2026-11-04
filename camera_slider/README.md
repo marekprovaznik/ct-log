@@ -149,14 +149,15 @@ A project whose pieces were edited by hand (camera_slider_KAR, where the spruce 
 row by row) first needs its layout: `fit-layout --edited_dir <KAR>/boards --builder_dir <builder
 project>/boards --mapping_root <out_root>/boards --out layout.json` fits a translation per piece and face
 row by template matching against the builder pieces, flags rows whose fit is poor (`ok`) and counts
-edited wood not explained by any row (`unexplained_px`). Pass it as `--src_layout` (or `--dst_layout` to
+edited wood not explained by any row (`unexplained_px`, with its boxes in `unexplained_boxes`). Pass it as `--src_layout` (or `--dst_layout` to
 write into that layout). Gap pixels between rows go to the nearest row.
 
 `transfer_report.csv` has one row per object: lost pixels (no owner in A, frame missing in B, or outside
 B's pieces), components before and after, the B pieces it landed in, and the seam jumps where neighbouring
 pixels of the object come from different frames: `seam_gap_px` (B pulls them apart, a notch where A lost
 wood) and `seam_overlap_px` (B pushes them together, wood that A showed twice). Objects above
-`--max_jump_px`, with lost pixels, more components or an unreliable layout row are `flagged`. Image tags
+`--max_jump_px`, with lost pixels, more components, an unreliable layout row or pixels in an
+unexplained box of the edited piece (`unexplained_px`) are `flagged`. Image tags
 are kept for B pieces with the same name as an A piece. `--frames_out` also saves the frame coordinates
 of every annotated pixel per board.
 

@@ -1,8 +1,10 @@
 from pathlib import Path
 from typing import Dict
 
-from camera_slider.compose import NO_OWNER, FaceCrop, layout_board, layout_placements, render_face
+from camera_slider.compose import NO_OWNER, FaceCrop, FacePlacement, layout_board, layout_placements, render_face
 from camera_slider.mapping import (
+    BoardMap,
+    FaceMap,
     crop_to_frame,
     distort_points,
     face_to_unrolled,
@@ -13,7 +15,7 @@ from camera_slider.mapping import (
     write_mapping,
 )
 from camera_slider.registration import Distortion, FrameFit, PassRegistration, undistort_points
-from camera_slider.transfer_annotations import RowShift, builder_to_edited, edited_to_builder
+from camera_slider.transfer_annotations import RowShift, builder_to_edited, edited_to_builder, fit_piece, in_boxes
 import cv2
 import numpy as np
 import pytest
@@ -148,3 +150,33 @@ def test_missing_mapping_raises(tmp_path: Path) -> None:
     """Loading a board without mapping.json fails loudly."""
     with pytest.raises(FileNotFoundError):
         load_mapping(tmp_path)
+
+
+def test_fit_piece_recovers_row_shift_and_leftover() -> None:
+    """A row moved down by hand is fitted exactly and a stray patch is reported as unexplained."""
+    rng = np.random.default_rng(2)
+    builder = np.zeros((200, 300), np.uint8)
+    builder[10:60] = _texture(rng, 50)
+    builder[80:110] = _texture(rng, 30)
+    edited = np.zeros_like(builder)
+    edited[10:60] = builder[10:60]
+    edited[150:180] = builder[80:110]
+    edited[100:120, 20:40] = 200
+    board = BoardMap("b", (200, 300), [_face(0, 0, 70), _face(1, 70, 60)], [])
+    fitted = fit_piece(edited, builder, board, max_mad=2.0)
+    assert [(r["row"], r["dx"], r["dy"]) for r in fitted["rows"]] == [(0, 0, 0), (1, 0, 70)]
+    assert fitted["unexplained_boxes"] == [[20, 100, 40, 120]]
+    assert in_boxes(np.array([[25.0, 105.0], [100.0, 20.0]]), fitted["unexplained_boxes"]) == 1
+
+
+def _texture(rng: np.random.Generator, height: int) -> np.ndarray:
+    noise = cv2.GaussianBlur(rng.uniform(0, 255, (height, 300)), (0, 0), 4)
+    return np.clip((noise - 127) * 10 + 140, 40, 255).astype(np.uint8)
+
+
+def _face(row: int, y: int, height: int) -> FaceMap:
+    distortion = Distortion(0.0, 0.0, (0.0, 0.0), 1.0)
+    return FaceMap(
+        str(row), row, (0.0, 0.0), (0, 0, 300, height), FacePlacement(0, y, 300, height, 1.0), 1.0, 1.0, distortion,
+        [], np.zeros((height, 300), np.uint8),
+    )

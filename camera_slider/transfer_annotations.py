@@ -132,16 +132,20 @@ def fit_piece(edited: np.ndarray, builder: np.ndarray, board: BoardMap, max_mad:
     explained = cv2.dilate(explained.astype(np.uint8), np.ones((5, 5), np.uint8)) > 0
     unexplained = (edited > WOOD_GRAY) & ~explained
     unexplained = cv2.morphologyEx(unexplained.astype(np.uint8), cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
+    n, _, stats, _ = cv2.connectedComponentsWithStats(unexplained, connectivity=8)
+    boxes = [[int(x), int(y), int(x + bw), int(y + bh)] for x, y, bw, bh, _ in stats[1:n]]
     return {
         "rows": rows,
         "overlap_rows": int((covered > 1).sum()),
         "unexplained_px": int(unexplained.sum()),
+        "unexplained_boxes": boxes,
     }
 
 
 def transfer(args: argparse.Namespace) -> None:
     src_layout = read_layout(args.src_layout)
     dst_layout = read_layout(args.dst_layout)
+    src_boxes = read_unexplained(args.src_layout)
     anns: Dict[str, Dict[str, Dict]] = {}
     for path in sorted((args.src_dir / "ann").glob("*.json")):
         piece = path.name[: -len(".json")]
@@ -153,7 +157,7 @@ def transfer(args: argparse.Namespace) -> None:
         shutil.copyfile(meta, args.out_dir.parent / "meta.json")
     if args.frames_out is not None:
         args.frames_out.mkdir(parents=True, exist_ok=True)
-    jobs = [(board, pieces, src_layout, dst_layout, args) for board, pieces in sorted(anns.items())]
+    jobs = [(board, pieces, src_layout, dst_layout, src_boxes, args) for board, pieces in sorted(anns.items())]
     with ProcessPoolExecutor(args.workers) as pool:
         results = list(pool.map(_transfer_board, jobs))
     records = [r for board_records in results for r in board_records]
@@ -173,6 +177,7 @@ def transfer_board(
     pieces: Dict[str, Dict],
     src_layout: Dict[str, List[RowShift]],
     dst_layout: Dict[str, List[RowShift]],
+    src_boxes: Dict[str, List[List[int]]],
     args: argparse.Namespace,
 ) -> List[Dict]:
     src = load_mapping(args.src_mapping_root / board)
@@ -200,6 +205,7 @@ def transfer_board(
                 "src_px": int(len(pix)),
                 "lost_src_px": int(frames.lost_src.reshape(-1, len(SUBSAMPLES))[:, 0].sum()),
                 "layout_ok": all(s.ok for s in shifts),
+                "unexplained_px": in_boxes(pix, src_boxes.get(piece_name, [])),
             }
             record.update(
                 seam_jumps(pix, frames.gid.reshape(-1, len(SUBSAMPLES))[:, 0], dst_unrolled[:: len(SUBSAMPLES)])
@@ -211,6 +217,7 @@ def transfer_board(
                 record["lost_src_px"]
                 or record["lost_dst_px"]
                 or not record["layout_ok"]
+                or record["unexplained_px"]
                 or record["seam_gap_px"] > args.max_jump_px
                 or record["seam_overlap_px"] > args.max_jump_px
                 or record["dst_components"] > record["src_components"]
@@ -410,6 +417,20 @@ def read_layout(path: Optional[Path]) -> Dict[str, List[RowShift]]:
         name: [RowShift(r["row"], tuple(r["band"]), r["dx"], r["dy"], r["mad"], r["ok"]) for r in piece["rows"]]
         for name, piece in data["pieces"].items()
     }
+
+
+def read_unexplained(path: Optional[Path]) -> Dict[str, List[List[int]]]:
+    if path is None:
+        return {}
+    pieces = json.loads(path.read_text())["pieces"]
+    return {name: piece.get("unexplained_boxes", []) for name, piece in pieces.items()}
+
+
+def in_boxes(pix: np.ndarray, boxes: List[List[int]]) -> int:
+    inside = np.zeros(len(pix), bool)
+    for x0, y0, x1, y1 in boxes:
+        inside |= (pix[:, 0] >= x0) & (pix[:, 0] < x1) & (pix[:, 1] >= y0) & (pix[:, 1] < y1)
+    return int(inside.sum())
 
 
 def write_report(path: Path, records: List[Dict]) -> None:
