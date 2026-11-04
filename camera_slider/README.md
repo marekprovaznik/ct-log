@@ -121,8 +121,14 @@ python -m camera_slider.stitch_qa_gallery --qa_dir <out> --pieces_dir <pieces im
 | `face_count` | Number of wood bands differs from the number of faces. |
 | `stray_segment` | Wood component outside every face (a sliver or an extra segment). |
 | `edge_step` | Step in a face's top or bottom edge, typically the adjacent face leaking into the face mask. |
-| `face_shift` | Faces misaligned along the board: lag of the edge profiles of adjacent faces (two-face boards: the dark-spot profiles of both faces), x offset of knots paired with `knot_id`, and the face length ratio before stretching from `report.json`. |
-| `bad_seam` | Frames disagree inside a face: worst tie-point seam of the frames in the piece (`report.json` + `mapping.json`), and with `--raw_root` the dense optical flow across the grain between consecutive frames warped through `mapping.json`. |
+| `face_shift` | Faces misaligned along the board: consistent x offset of knots paired with `knot_id` across faces (needs annotations). |
+| `bad_seam` | Frames disagree inside a face: worst tie-point seam of the frames in the piece (`report.json` + `mapping.json`) or uncovered columns. |
+
+Evidence-only columns, not used for the types because their hits on KAR were not confirmed by a visual
+check: `shift_med_mm` (lag of the edge profiles of adjacent faces; two-face boards: dark-spot profiles of
+both faces), `stretch_ratio` (face length ratio before stretching, from `report.json`) and, with
+`--raw_root`, `frame_p90_px` / `frame_median_px` (dense optical flow across the grain between consecutive
+frames warped through `mapping.json`).
 
 Outputs: `pieces.csv` (all signals, `types`, `score`, `r_<type>` per type, `evidence`), `boards.csv`,
 `summary.json` (counts, thresholds, and per-type precision/recall with `--labels`, a CSV of `piece,types`

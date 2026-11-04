@@ -56,11 +56,8 @@ class Thresholds:
     order_build_fraction: float = 0.8
     stray_mm2: float = 40.0
     edge_step_mm: float = 5.0
-    shift_mm: float = 10.0
     knot_dx_mm: float = 20.0
-    stretch_ratio: float = 1.03
     seam_px: float = 3.5
-    frame_p90_px: float = 12.0
 
 
 def main() -> None:
@@ -448,18 +445,11 @@ def classify(pieces: pd.DataFrame, t: Thresholds, expected: str) -> pd.DataFrame
     ratios["stray_segment"] = pieces.stray_max_mm2 / t.stray_mm2
     ratios["face_count"] = (pieces.n_bands != pieces.n_faces) * 1.0
     ratios["edge_step"] = pieces.edge_step_mm / t.edge_step_mm
-    ratios["face_shift"] = pd.concat(
-        [
-            pieces.shift_med_mm.abs() / t.shift_mm,
-            (pieces.knot_dx_med_mm.abs() / t.knot_dx_mm).where(
-                pieces.knot_dx_mad_mm <= 0.5 * pieces.knot_dx_med_mm.abs()
-            ),
-            (pieces.stretch_ratio - 1) / (t.stretch_ratio - 1),
-        ],
-        axis=1,
-    ).max(axis=1)
+    ratios["face_shift"] = (pieces.knot_dx_med_mm.abs() / t.knot_dx_mm).where(
+        pieces.knot_dx_mad_mm <= 0.5 * pieces.knot_dx_med_mm.abs()
+    )
     ratios["bad_seam"] = pd.concat(
-        [pieces.seam_max_px / t.seam_px, pieces.frame_p90_px / t.frame_p90_px, (pieces.uncovered_columns > 0) * 1.0],
+        [pieces.seam_max_px / t.seam_px, (pieces.uncovered_columns > 0) * 1.0],
         axis=1,
     ).max(axis=1)
     ratios = ratios.fillna(0.0)
@@ -545,14 +535,11 @@ def evidence(row: pd.Series) -> str:
         parts.append("edge step %.1f mm at %s" % (row.edge_step_mm, row.edge_step_at))
     if "face_shift" in types:
         parts.append(
-            "face lag median %.1f mm; knot pair dx median %.1f mm; face length ratio %.3f"
-            % (row.shift_med_mm, row.knot_dx_med_mm, row.stretch_ratio)
+            "knot pair dx median %.1f mm (MAD %.1f, %d pairs)"
+            % (row.knot_dx_med_mm, row.knot_dx_mad_mm, row.knot_pairs)
         )
     if "bad_seam" in types:
-        parts.append(
-            "tie seam max %.2f px, frame disagreement p90 %.2f px, uncovered columns %s"
-            % (row.seam_max_px, row.frame_p90_px, row.uncovered_columns)
-        )
+        parts.append("tie seam max %.2f px, uncovered columns %s" % (row.seam_max_px, row.uncovered_columns))
     return " | ".join(parts)
 
 
