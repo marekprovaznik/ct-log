@@ -182,11 +182,12 @@ def test_piece_provenance_takes_main_source_and_flags_mixed() -> None:
     """A piece inherits the tags of its main source; objects from a differently tagged neighbour flag it."""
     pieces = {"b_x0.jpg": {"tags": [{"name": "bumaska"}]}, "b_x9.jpg": {"tags": []}}
     shares = {"b_x0.jpg": 0.99, "b_x9.jpg": 0.01}
-    records = [{"src_piece": "b_x9.jpg", "dst_pieces": "b_x1.jpg"}]
+    records = [{"src_piece": "b_x9.jpg", "dst_pieces": "b_x1.jpg", "class": "dead_knot"}]
     main, row = piece_provenance("b", "b_x1.jpg", shares, pieces, records)
     assert main == "b_x0.jpg"
     assert row["tags"] == "bumaska"
     assert row["objects_from_differently_tagged"] == 1
+    assert row["their_classes"] == "dead_knot"
     assert row["flagged"]
     _, clean = piece_provenance("b", "b_x1.jpg", shares, pieces, [])
     assert not clean["flagged"]

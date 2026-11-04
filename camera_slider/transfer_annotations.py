@@ -36,7 +36,7 @@ WOOD_GRAY = 20
 WOOD_ROW_FRACTION = 0.1
 DROP_FIELDS = ("id",)
 SHARE_STEP_PX = 8
-CHUNK_PX = 1_000_000
+CHUNK_PX = 250_000
 SHIFT_SAMPLE_STEP = 97
 MAX_FOREIGN_SHARE = 0.02
 
@@ -83,6 +83,7 @@ def main() -> None:
     move.add_argument("--boards", nargs="*", default=None)
     move.add_argument("--max_jump_px", type=float, default=1.5, help="seam jump above which an object is flagged")
     move.add_argument("--workers", type=int, default=8)
+    move.add_argument("--chunk_px", type=int, default=CHUNK_PX, help="mask pixels mapped at once; sets memory per worker")
     move.add_argument(
         "--stitch_tags",
         nargs="*",
@@ -212,7 +213,10 @@ def transfer_board(
         x0 = src.piece(piece_name)["x0"]
         for obj in ann["objects"]:
             mask, origin = object_mask(obj, (ann["size"]["height"], ann["size"]["width"]))
-            moved = move_object(mask, origin, src, shifts, x0, dst, dst_layout, src_boxes.get(piece_name, []))
+            moved = move_object(
+                mask, origin, src, shifts, x0, dst, dst_layout, src_boxes.get(piece_name, []), args.chunk_px,
+                args.frames_out is not None,
+            )
             record = {
                 "board": board,
                 "src_piece": piece_name,
@@ -226,7 +230,8 @@ def transfer_board(
                 **moved.seams,
             }
             smart = map_smart_input(obj, src, shifts, x0, dst, dst_layout, moved.shifts)
-            placed = place_objects(obj, moved.patches, out, smart)
+            tags = carry_tags(obj.get("tags", []), args.stitch_tags, same)
+            placed = place_objects(obj, moved.patches, out, smart, tags)
             placed["lost_dst_px"] = moved.lost_dst_px
             record.update(placed)
             if not placed["dst_pieces"]:
@@ -332,7 +337,8 @@ def piece_provenance(
     main = max(shares, key=shares.get) if shares else None
     tag_names = {n: sorted(t["name"] for t in pieces[n]["tags"]) if n in pieces else None for n in shares}
     foreign = [n for n in shares if n != main and tag_names[n] != tag_names.get(main)]
-    foreign_objects = sum(r["src_piece"] in foreign and name in r["dst_pieces"].split() for r in records)
+    foreign_records = [r for r in records if r["src_piece"] in foreign and name in r["dst_pieces"].split()]
+    foreign_objects = len(foreign_records)
     row = {
         "board": board,
         "dst_piece": name,
@@ -341,6 +347,7 @@ def piece_provenance(
         "tags": " ".join(tag_names.get(main) or []),
         "sources": " ".join(f"{n}:{shares[n]:.4f}:{'+'.join(tag_names[n] or ['-'])}" for n in shares),
         "objects_from_differently_tagged": foreign_objects,
+        "their_classes": " ".join(sorted({r["class"] for r in foreign_records})),
         "flagged": bool(foreign_objects or sum(shares[n] for n in foreign) > MAX_FOREIGN_SHARE),
     }
     return main, row
@@ -477,10 +484,12 @@ def move_object(
     dst: BoardMap,
     dst_layout: Dict[str, List[RowShift]],
     boxes: List[List[int]],
+    chunk_px: int = CHUNK_PX,
+    keep_frames: bool = False,
 ) -> MovedObject:
     h, w = mask.shape
     n = len(SUBSAMPLES)
-    rows = max(1, CHUNK_PX // max(w, 1))
+    rows = max(1, chunk_px // max(w, 1))
     canvases: Dict[str, List] = {}
     moves: Dict[str, List[np.ndarray]] = {}
     seams = SeamStats()
@@ -503,8 +512,9 @@ def move_object(
         counts["lost_src"] += int(frames.lost_src.reshape(-1, n)[core, 0].sum())
         counts["lost_dst"] += int((which.reshape(-1, n)[:, 0] < 0).sum())
         counts["unexplained"] += in_boxes(pix[core], boxes)
-        centre_gid.append(gid[core])
-        centre_raw.append(frames.raw.reshape(-1, n, 2)[core, 0])
+        if keep_frames:
+            centre_gid.append(gid[core])
+            centre_raw.append(frames.raw.reshape(-1, n, 2)[core, 0].astype(np.float32))
         for index, hit in _groups(which):
             if index < 0:
                 continue
@@ -581,7 +591,11 @@ class SeamStats:
 
 
 def place_objects(
-    obj: Dict, patches: Dict[str, Tuple[np.ndarray, np.ndarray]], out: Dict[str, List], smart: Dict[str, Dict]
+    obj: Dict,
+    patches: Dict[str, Tuple[np.ndarray, np.ndarray]],
+    out: Dict[str, List],
+    smart: Dict[str, Dict],
+    tags: List[Dict],
 ) -> Dict:
     pieces = []
     dst_px = 0
@@ -589,6 +603,7 @@ def place_objects(
     for name in sorted(patches):
         patch, lo = patches[name]
         new = _clean(obj)
+        new["tags"] = tags
         if name in smart:
             new["smartToolInput"] = smart[name]
         if obj["geometryType"] == "rectangle":
