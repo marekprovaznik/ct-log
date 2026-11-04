@@ -137,7 +137,8 @@ together map each pixel of the unrolled board and its pieces back to a source fr
 
 [transfer_annotations.py](transfer_annotations.py) moves Supervisely annotations from one stitch of a board
 (A) to another (B) through the source frames: every annotated pixel of A goes to its owner frame, and from
-that frame into B with B's homography of the same frame. Both stitches need their mapping.
+that frame into B with B's homography of the same frame. Frames are matched by the last three parts of their
+path (block, folder, file), so A and B may be built on different machines. Both stitches need their mapping.
 
 ```bash
 python -m camera_slider.transfer_annotations transfer \

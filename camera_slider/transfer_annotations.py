@@ -20,6 +20,7 @@ from camera_slider.mapping import (
     BoardMap,
     crop_to_frame,
     face_to_unrolled,
+    frame_key,
     frame_to_crop,
     load_mapping,
     owners,
@@ -220,7 +221,7 @@ def transfer_board(
                 or record["unexplained_px"]
                 or record["seam_gap_px"] > args.max_jump_px
                 or record["seam_overlap_px"] > args.max_jump_px
-                or record["dst_components"] > record["src_components"]
+                or record["dst_components"] > record["src_components"] + max(len(record["dst_pieces"].split()) - 1, 0)
             )
             records.append(record)
             if args.frames_out is not None:
@@ -273,7 +274,7 @@ def from_frames(
     unrolled = np.full((len(frames.gid), 2), np.nan)
     rows = np.full(len(frames.gid), -1)
     for gid in np.unique(frames.gid[frames.gid >= 0]):
-        path = frames.paths[gid]
+        path = frame_key(frames.paths[gid])
         if path not in lookup:
             continue
         k, index = lookup[path]

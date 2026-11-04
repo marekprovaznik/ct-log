@@ -11,6 +11,7 @@ from camera_slider.registration import Distortion, PassRegistration, undistort_p
 
 MAPPING_VERSION = 1
 MAPPING_FILE = "mapping.json"
+FRAME_KEY_PARTS = 3
 
 
 @dataclasses.dataclass
@@ -55,7 +56,15 @@ class BoardMap:
         raise ValueError(msg)
 
     def frame_index(self) -> Dict[str, Tuple[int, int]]:
-        return {f.path: (k, f.index) for k, face in enumerate(self.faces) for f in face.frames}
+        index = {frame_key(f.path): (k, f.index) for k, face in enumerate(self.faces) for f in face.frames}
+        if len(index) != sum(len(face.frames) for face in self.faces):
+            msg = f"{self.board}: frame keys (last {FRAME_KEY_PARTS} path parts) are not unique"
+            raise ValueError(msg)
+        return index
+
+
+def frame_key(path: str) -> str:
+    return "/".join(Path(path).parts[-FRAME_KEY_PARTS:])
 
 
 def write_mapping(
