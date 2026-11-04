@@ -13,6 +13,7 @@ import numpy as np
 from PIL import Image
 
 from camera_slider.compose import FaceCrop, crop_board, layout_board, render_face
+from camera_slider.mapping import write_mapping
 from camera_slider.registration import (
     FrameObs,
     PassRegistration,
@@ -89,6 +90,12 @@ def stitch_board(args: argparse.Namespace) -> Dict:
         cv2.imwrite(str(out_dir / f"face_{face}_mask.png"), crop.mask.astype(np.uint8) * 255)
 
     board, _ = layout_board(crops)
+    order = list(range(len(crops)))
+    shapes = [analysed[g[0]][0].shape for g in passes]
+    areas = [str(k) for k in range(1, len(crops) + 1)]
+    write_mapping(
+        out_dir, board_id, passes, geometries, crops, shapes, areas, order, px_per_unit, board.shape[:2], [], 40, True, 40
+    )
     cv2.imwrite(str(out_dir / f"unrolled.{args.ext}"), board, _write_params(args.ext))
     scale = min(1.0, args.preview_width / board.shape[1])
     preview = cv2.resize(board, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
