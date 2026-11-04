@@ -7,10 +7,10 @@ import numpy as np
 from scipy.optimize import least_squares
 from threadpoolctl import threadpool_limits
 
+from camera_slider.markers import detect_markers, make_aruco
 from camera_slider.wood import PairMatches
 
 LOGGER = logging.getLogger(__name__)
-ARUCO_DICT = cv2.aruco.DICT_7X7_1000
 TEMPLATE = np.array([[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]])
 FRAME_PARAMS = 8
 MARKER_PARAMS = 3
@@ -27,6 +27,8 @@ class FrameObs:
     ids: np.ndarray
     corners: np.ndarray
     shape: Tuple[int, int]
+    source: np.ndarray = dataclasses.field(default_factory=lambda: np.zeros(0, int))
+    n_aruco: int = 0
 
 
 @dataclasses.dataclass
@@ -91,23 +93,13 @@ class _Problem:
 
 
 def make_detector() -> cv2.aruco.ArucoDetector:
-    params = cv2.aruco.DetectorParameters()
-    params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
-    return cv2.aruco.ArucoDetector(cv2.aruco.getPredefinedDictionary(ARUCO_DICT), params)
+    return make_aruco()
 
 
 def detect_frame(name: str, image: np.ndarray, detector: cv2.aruco.ArucoDetector) -> FrameObs:
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if image.ndim == 3 else image
-    corners, ids, _ = detector.detectMarkers(gray)
-    if ids is None:
-        return FrameObs(name, np.zeros(0, dtype=int), np.zeros((0, 4, 2)), gray.shape[:2])
-    ids = ids.ravel().astype(int)
-    corners = np.stack([c[0] for c in corners]).astype(np.float64)
-    unique, counts = np.unique(ids, return_counts=True)
-    keep = np.isin(ids, unique[counts == 1])
-    if not keep.all():
-        LOGGER.warning("%s: dropping duplicated marker ids %s", name, unique[counts > 1].tolist())
-    return FrameObs(name, ids[keep], corners[keep], gray.shape[:2])
+    found = detect_markers(gray, detector)
+    return FrameObs(name, found.ids, found.corners, gray.shape[:2], found.source, found.n_aruco)
 
 
 def register_pass(
@@ -202,6 +194,19 @@ def register_pass(
         outlier_px,
     )
     return PassRegistration(frames, poses, side_px, pitch, k, seams, n_tie_outliers, distortion)
+
+
+def to_strip_steps(registration: PassRegistration) -> PassRegistration:
+    p = registration.pitch
+    scale = np.diag([1 / p, 1 / p, 1.0])
+    frames = [
+        dataclasses.replace(f, transform=None if f.transform is None else scale @ f.transform)
+        for f in registration.frames
+    ]
+    poses = {m: np.array([pose[0] / p, pose[1] / p, pose[2]]) for m, pose in registration.marker_poses.items()}
+    return dataclasses.replace(
+        registration, frames=frames, marker_poses=poses, marker_side_px=registration.marker_side_px * p
+    )
 
 
 def undistort_points(pts: np.ndarray, distortion: Distortion) -> np.ndarray:

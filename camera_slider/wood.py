@@ -20,6 +20,8 @@ class EdgeParams:
     min_gap: int
     reference_window: int
     tolerance: float
+    gap_v: int
+    dark_ratio: float
 
 
 @dataclasses.dataclass
@@ -51,6 +53,7 @@ def segment_board(
     edge_margin: int = 120,
     min_gap_px: int = 8,
     gap_v: int = 35,
+    dark_ratio: float = 0.6,
     reference_window: int = 8001,
     edge_tolerance: float = 20.0,
 ) -> np.ndarray:
@@ -64,10 +67,10 @@ def segment_board(
         raise ValueError(msg)
     board = (labels == 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])).astype(np.uint8)
     del labels
-    lit = cv2.cvtColor(small, cv2.COLOR_BGR2HSV)[..., 2] >= gap_v
+    value = cv2.cvtColor(small, cv2.COLOR_BGR2HSV)[..., 2]
     edges = _column_edges(
         _fill_holes(board).astype(bool),
-        lit,
+        value,
         EdgeParams(
             window=edge_window // scale | 1,
             smooth=smooth_px // scale | 1,
@@ -76,6 +79,8 @@ def segment_board(
             min_gap=max(1, min_gap_px // scale),
             reference_window=reference_window // scale | 1,
             tolerance=edge_tolerance / scale,
+            gap_v=gap_v,
+            dark_ratio=dark_ratio,
         ),
     )
     if edges is None:
@@ -128,7 +133,7 @@ def _draw_band(
 
 
 def _column_edges(
-    mask: np.ndarray, lit: np.ndarray, params: EdgeParams
+    mask: np.ndarray, value: np.ndarray, params: EdgeParams
 ) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
     runs = np.array([_longest_run(column) for column in mask.T])
     lengths = runs[:, 1] - runs[:, 0]
@@ -137,7 +142,7 @@ def _column_edges(
     valid = np.flatnonzero(lengths >= params.min_run_frac * np.median(lengths[lengths > 0]))
     full = runs[valid]
     trimmed = np.array(
-        [_trim_run(tuple(full[i]), lit[:, x], params.margin, params.min_gap) for i, x in enumerate(valid)]
+        [_trim_run(tuple(full[i]), value[:, x], params) for i, x in enumerate(valid)]
     )
     reference = median_filter(trimmed, size=(params.reference_window, 1), mode="reflect")
     chosen = np.where(np.abs(trimmed - reference) <= np.abs(full - reference), trimmed, full)
@@ -161,15 +166,17 @@ def _drop_outliers(columns: np.ndarray, edge: np.ndarray, reference: np.ndarray,
     return np.interp(columns, columns[keep], edge[keep])
 
 
-def _trim_run(run: Tuple[int, int], wood: np.ndarray, margin: int, min_gap: int) -> Tuple[int, int]:
+def _trim_run(run: Tuple[int, int], value: np.ndarray, params: EdgeParams) -> Tuple[int, int]:
     start, end = run
-    width = min(margin, (end - start) // 4)
-    if width < min_gap:
+    width = min(params.margin, (end - start) // 4)
+    if width < params.min_gap:
         return run
-    top_gaps = _dark_runs(wood[start : start + width], min_gap)
+    threshold = max(params.gap_v, params.dark_ratio * float(np.median(value[start:end])))
+    wood = value >= threshold
+    top_gaps = _dark_runs(wood[start : start + width], params.min_gap)
     if top_gaps:
         start += top_gaps[-1][1]
-    bottom_gaps = _dark_runs(wood[end - width : end], min_gap)
+    bottom_gaps = _dark_runs(wood[end - width : end], params.min_gap)
     if bottom_gaps:
         end = end - width + bottom_gaps[0][0]
     return start, end

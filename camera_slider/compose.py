@@ -114,34 +114,22 @@ def crop_board(render: FaceRender) -> FaceCrop:
     return FaceCrop(image, mask, (x0, y0, x1, y1), x_range, uncovered, render.owner[y0:y1, x0:x1], render.origin)
 
 
-def layout_board(
-    crops: List[FaceCrop], gap: int = 40, stretch: bool = True, margin: int = 40
-) -> Tuple[np.ndarray, List[float]]:
-    placements = layout_placements([c.image.shape[:2] for c in crops], gap, stretch, margin)
+def layout_board(crops: List[FaceCrop], gap: int = 40, margin: int = 40) -> np.ndarray:
+    placements = layout_placements([c.image.shape[:2] for c in crops], gap, margin)
     width = max(p.width for p in placements) + 2 * margin
     height = sum(p.height for p in placements) + gap * (len(placements) - 1) + 2 * margin
     board = np.zeros((height, width, 3), np.uint8)
     for crop, p in zip(crops, placements):
-        image = (
-            cv2.resize(crop.image, (p.width, p.height), interpolation=cv2.INTER_LINEAR)
-            if p.width != crop.image.shape[1]
-            else crop.image
-        )
-        board[p.y : p.y + p.height, p.x : p.x + p.width] = image
-    return board, [p.scale_x for p in placements]
+        board[p.y : p.y + p.height, p.x : p.x + p.width] = crop.image
+    return board
 
 
-def layout_placements(
-    shapes: List[Tuple[int, int]], gap: int = 40, stretch: bool = True, margin: int = 40
-) -> List[FacePlacement]:
-    widths = [w for _, w in shapes]
-    length = int(np.median(widths))
-    out_widths = [length if stretch else w for w in widths]
-    width = max(out_widths) + 2 * margin
+def layout_placements(shapes: List[Tuple[int, int]], gap: int = 40, margin: int = 40) -> List[FacePlacement]:
+    width = max(w for _, w in shapes) + 2 * margin
     placements = []
     y = margin
-    for (h, w), out_w in zip(shapes, out_widths):
-        placements.append(FacePlacement((width - out_w) // 2, y, out_w, h, out_w / w))
+    for h, w in shapes:
+        placements.append(FacePlacement((width - w) // 2, y, w, h, 1.0))
         y += h + gap
     return placements
 

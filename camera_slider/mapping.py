@@ -80,10 +80,9 @@ def write_mapping(
     unrolled_shape: Tuple[int, int],
     pieces: List[Dict],
     gap: int,
-    stretch: bool,
     margin: int,
 ) -> int:
-    placements = layout_placements([crops[k].image.shape[:2] for k in ordered], gap, stretch, margin)
+    placements = layout_placements([crops[k].image.shape[:2] for k in ordered], gap, margin)
     rows = {k: row for row, k in enumerate(ordered)}
     faces = []
     n_bytes = 0
@@ -129,7 +128,7 @@ def write_mapping(
         ),
         "px_per_unit": px_per_unit,
         "unrolled_shape": list(unrolled_shape),
-        "layout": {"gap_px": gap, "margin_px": margin, "stretch": stretch},
+        "layout": {"gap_px": gap, "margin_px": margin},
         "no_owner": NO_OWNER,
         "pieces": pieces,
         "faces": faces,

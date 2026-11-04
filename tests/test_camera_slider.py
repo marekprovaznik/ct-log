@@ -2,8 +2,8 @@ import datetime
 from pathlib import Path
 from typing import Dict, List
 
+from camera_slider.markers import STRIP_DICT
 from camera_slider.registration import (
-    ARUCO_DICT,
     Distortion,
     PassRegistration,
     detect_frame,
@@ -199,7 +199,7 @@ def _strip_texture(width: int) -> List[np.ndarray]:
     pitch = PITCH_MM * TEXTURE_PX_PER_MM
     height = side + 40
     strip = np.full((height, width, 3), 245, np.uint8)
-    dictionary = cv2.aruco.getPredefinedDictionary(ARUCO_DICT)
+    dictionary = cv2.aruco.getPredefinedDictionary(STRIP_DICT)
     marker_id = 0
     while 20 + marker_id * pitch + side < width:
         x = int(round(20 + marker_id * pitch))

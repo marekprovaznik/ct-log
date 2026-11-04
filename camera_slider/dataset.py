@@ -20,7 +20,8 @@ from camera_slider.wood import make_sift, wood_features
 
 LOGGER = logging.getLogger(__name__)
 JPEG_MAX_SIDE = 65500
-FACE_ORDER = {4: "ADCB", 2: "AB"}
+FACE_ORDER = {4: "ABCD", 2: "AB"}
+MARKER_CACHE_VERSION = "v2"
 
 
 def main() -> None:
@@ -50,7 +51,10 @@ def main() -> None:
     parser.add_argument("--skip_existing", action="store_true")
     parser.add_argument("--index_only", action="store_true")
     parser.add_argument(
-        "--no_stretch_faces", action="store_true", help="centre the faces instead of stretching them to one length"
+        "--max_face_length_diff_mm",
+        type=float,
+        default=2.0,
+        help="reject a board whose faces differ in length by more than this",
     )
     parser.add_argument(
         "--save_renders", action="store_true", help="also write each face's stitched frames before masking"
@@ -128,9 +132,7 @@ def build_board(
 
     order = FACE_ORDER.get(len(crops), "".join(areas))
     ordered = sorted(range(len(crops)), key=lambda k: order.index(areas[k]) if areas[k] in order else k)
-    unrolled, stretch = layout_board(
-        [crops[k] for k in ordered], args.gap_px, not args.no_stretch_faces, args.margin_px
-    )
+    unrolled = layout_board([crops[k] for k in ordered], args.gap_px, args.margin_px)
 
     for crop, area in zip(crops, areas):
         _save(board_dir / f"face_{area}.jpg", crop.image)
@@ -142,7 +144,14 @@ def build_board(
         cv2.resize(unrolled, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA),
         [cv2.IMWRITE_JPEG_QUALITY, 90],
     )
+    marker_pitch_units = float(np.median([g.pitch for g in geometries]))
+    marker_side_mm = rail.pitch_mm / marker_pitch_units if rail is not None else None
+    px_per_mm = px_per_unit / rail.pitch_mm if rail is not None else None
+    face_length_mm = (
+        {areas[k]: round(crops[k].image.shape[1] / px_per_mm, 2) for k in ordered} if px_per_mm else None
+    )
     rejected = reject_reasons(faces, len(crops), log.passes, args.max_reject_seam_px)
+    rejected += length_reasons(face_length_mm, args.max_face_length_diff_mm)
     pieces = [] if rejected else write_pieces(unrolled, name, args)
     mapping_bytes = write_mapping(
         board_dir,
@@ -157,13 +166,9 @@ def build_board(
         unrolled.shape[:2],
         pieces,
         args.gap_px,
-        not args.no_stretch_faces,
         args.margin_px,
     )
 
-    marker_pitch_units = float(np.median([g.pitch for g in geometries]))
-    marker_side_mm = rail.pitch_mm / marker_pitch_units if rail is not None else None
-    px_per_mm = px_per_unit / marker_side_mm if marker_side_mm else None
     report = {
         "board": name,
         "status": f"rejected: {'; '.join(rejected)}" if rejected else "ok",
@@ -174,8 +179,11 @@ def build_board(
         "match_reason": match.reason,
         "mtime_check": match.mtime_check,
         "face_order": [areas[k] for k in ordered],
-        "face_stretch": dict(zip([areas[k] for k in ordered], stretch)),
-        "px_per_marker_side": px_per_unit,
+        "face_length_mm": face_length_mm,
+        "face_length_diff_mm": round(max(face_length_mm.values()) - min(face_length_mm.values()), 2)
+        if face_length_mm
+        else None,
+        "px_per_marker_step": px_per_unit,
         "marker_side_mm": marker_side_mm,
         "px_per_mm": px_per_mm,
         "rail_pitch_mm": rail.pitch_mm if rail is not None else None,
@@ -203,6 +211,17 @@ def reject_reasons(faces: List[Dict], n_faces: int, n_passes: int, max_seam_px: 
         if face["seam_max_px"] is None or face["seam_max_px"] > max_seam_px:
             reasons.append(f"face {face['face']}: seam {face['seam_max_px']} px")
     return reasons
+
+
+def length_reasons(face_length_mm: Optional[Dict[str, float]], max_diff_mm: float) -> List[str]:
+    if face_length_mm is None:
+        return ["face length unknown (no rail calibration)"]
+    lengths = face_length_mm.values()
+    diff = max(lengths) - min(lengths)
+    if diff <= max_diff_mm:
+        return []
+    listed = ", ".join(f"{area} {length:.1f}" for area, length in face_length_mm.items())
+    return [f"face length differs by {diff:.1f} mm ({listed})"]
 
 
 def write_pieces(unrolled: np.ndarray, name: str, args: argparse.Namespace) -> List[Dict]:
@@ -239,7 +258,7 @@ def detect_all(boards: List[BoardMatch], cache_dir: Path, workers: int) -> Dict[
     cache_dir.mkdir(parents=True, exist_ok=True)
     observations: Dict[Path, FrameObs] = {}
     for match in boards:
-        cache = cache_dir / f"markers_s{match.log.session:03d}_{match.block}.pkl"
+        cache = cache_dir / f"markers_{MARKER_CACHE_VERSION}_s{match.log.session:03d}_{match.block}.pkl"
         if cache.exists():
             cached = pickle.loads(cache.read_bytes())
             if list(cached) == match.segment.frames:
@@ -387,6 +406,7 @@ def _manifest_row(report: Dict, faces: List[Dict], shots: List[PassShots], n_fra
         "seam_max_px": round(max(seams), 2) if seams else "",
         "height_k": "/".join(f"{f['height_scale_k']:.4f}" for f in faces),
         "px_per_mm": round(report["px_per_mm"], 3) if report["px_per_mm"] else "",
+        "face_length_diff_mm": report["face_length_diff_mm"] if report["face_length_diff_mm"] is not None else "",
         "unrolled_h": report["unrolled_shape"][0],
         "unrolled_w": report["unrolled_shape"][1],
         "pieces": len(report["pieces"]),

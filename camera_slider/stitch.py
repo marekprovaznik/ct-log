@@ -15,6 +15,7 @@ from PIL import Image
 from camera_slider.compose import FaceCrop, crop_board, layout_board, render_face
 from camera_slider.mapping import write_mapping
 from camera_slider.registration import (
+    to_strip_steps,
     FrameObs,
     PassRegistration,
     detect_frame,
@@ -45,7 +46,7 @@ def main() -> None:
     parser.add_argument("--pass_gap_s", type=float, default=3.0)
     parser.add_argument("--min_markers", type=int, default=2)
     parser.add_argument("--outlier_px", type=float, default=8.0)
-    parser.add_argument("--marker_mm", type=float, default=None)
+    parser.add_argument("--marker_pitch_mm", type=float, default=None, help="distance between marker centres")
     parser.add_argument("--px_per_mm", type=float, default=None)
     parser.add_argument("--no_height_correction", action="store_true")
     parser.add_argument("--no_distortion", action="store_true", help="do not estimate radial lens distortion")
@@ -59,8 +60,8 @@ def main() -> None:
 
 
 def stitch_board(args: argparse.Namespace) -> Dict:
-    if args.px_per_mm is not None and args.marker_mm is None:
-        msg = "--px_per_mm needs --marker_mm"
+    if args.px_per_mm is not None and args.marker_pitch_mm is None:
+        msg = "--px_per_mm needs --marker_pitch_mm"
         raise ValueError(msg)
     board_id = args.board_id or args.frames_dir.name
     paths = sorted(p for p in args.frames_dir.iterdir() if p.suffix.lower() in IMAGE_SUFFIXES)
@@ -83,18 +84,18 @@ def stitch_board(args: argparse.Namespace) -> Dict:
         {p: a[0] for p, a in analysed.items()},
         {p: a[1] for p, a in analysed.items()},
         args,
-        px_per_unit=args.px_per_mm * args.marker_mm if args.px_per_mm is not None else None,
+        px_per_unit=args.px_per_mm * args.marker_pitch_mm if args.px_per_mm is not None else None,
     )
     for face, crop in enumerate(crops, start=1):
         cv2.imwrite(str(out_dir / f"face_{face}.{args.ext}"), crop.image, _write_params(args.ext))
         cv2.imwrite(str(out_dir / f"face_{face}_mask.png"), crop.mask.astype(np.uint8) * 255)
 
-    board, _ = layout_board(crops)
+    board = layout_board(crops)
     order = list(range(len(crops)))
     shapes = [analysed[g[0]][0].shape for g in passes]
     areas = [str(k) for k in range(1, len(crops) + 1)]
     write_mapping(
-        out_dir, board_id, passes, geometries, crops, shapes, areas, order, px_per_unit, board.shape[:2], [], 40, True, 40
+        out_dir, board_id, passes, geometries, crops, shapes, areas, order, px_per_unit, board.shape[:2], [], 40, 40
     )
     cv2.imwrite(str(out_dir / f"unrolled.{args.ext}"), board, _write_params(args.ext))
     scale = min(1.0, args.preview_width / board.shape[1])
@@ -107,9 +108,9 @@ def stitch_board(args: argparse.Namespace) -> Dict:
         "n_frames": len(paths),
         "n_passes": len(passes),
         "pass_grouping": f"capture-time gap > {args.pass_gap_s} s",
-        "px_per_marker": px_per_unit,
-        "marker_mm": args.marker_mm,
-        "px_per_mm": px_per_unit / args.marker_mm if args.marker_mm else None,
+        "px_per_marker_step": px_per_unit,
+        "marker_pitch_mm": args.marker_pitch_mm,
+        "px_per_mm": px_per_unit / args.marker_pitch_mm if args.marker_pitch_mm else None,
         "unrolled_shape": list(board.shape[:2]),
         "faces": faces,
     }
@@ -141,7 +142,8 @@ def stitch_faces(
     render_paths: Optional[List[Path]] = None,
 ) -> Tuple[List[PassRegistration], List[FaceCrop], List[Dict], float]:
     geometries = [
-        solve_face(
+        to_strip_steps(
+            solve_face(
             [observations[p] for p in group],
             [features[p] for p in group],
             args.min_markers,
@@ -149,6 +151,7 @@ def stitch_faces(
             not args.no_height_correction,
             args.workers,
             not args.no_distortion,
+            )
         )
         for group in groups
     ]

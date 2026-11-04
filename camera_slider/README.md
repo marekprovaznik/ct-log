@@ -37,8 +37,8 @@ python -m camera_slider.stitch --frames_dir <board_frames_dir> --out_dir <derive
    near-black gap when that brings the edge closer to the board's edge line (median over ~8000 px), which
    drops the side face seen at an angle while keeping dark wood at the edge. Edge points further than 20 px
    from that line are interpolated from their neighbours, and both edges are smoothed.
-8. **Layout.** Faces are stretched to their median length (`--no_stretch_faces` centres them instead), so
-   the board ends line up, and stacked with `--gap_px` between faces and `--margin_px` around the board.
+8. **Layout.** Faces keep their measured length (never resized), are centred and stacked with `--gap_px`
+   between faces and `--margin_px` around the board.
 
 ## Outputs (`<out_dir>/<board_id>/`)
 
@@ -80,10 +80,12 @@ python -m camera_slider.dataset \
 3. **Frames to shots** ([shots.py](shots.py)). The camera position from the markers is fitted to the CSV
    `pos_mm` per block (rail pitch in mm per marker ID), and each frame gets its shot index, delay and
    position; skipped shots and late frames are counted per pass.
-4. **Stitch** each pass as above; faces and directions come from the CSV, layout `ADCB` for 4 faces and
-   `AB` for 2.
+4. **Stitch** each pass as above; faces and directions come from the CSV, layout `ABCD` for 4 faces (the
+   order in which adjacent faces share an edge, checked with knots crossing the edges) and `AB` for 2.
 5. **Reject** a board (no pieces, status `rejected: ...` in `manifest.csv`) when its CSV match is not
-   `ok`, a face has uncovered columns, or a seam exceeds `--max_reject_seam_px`. Exceptions give
+   `ok`, a face has uncovered columns, a seam exceeds `--max_reject_seam_px`, or the face lengths of the board
+   differ by more than `--max_face_length_diff_mm` (2 mm; a length mismatch is a stitching error, faces are
+   never stretched to hide it). `report.json` has `face_length_mm` and `face_length_diff_mm`. Exceptions give
    `failed: ...`. `--skip_existing` resumes a run.
 
 Outputs under `--out_root`:
@@ -159,7 +161,7 @@ Every built board (and `stitch.py` output) has `mapping.json` and one `owner_<ar
 together map each pixel of the unrolled board and its pieces back to a source frame:
 
 - `mapping.json`: per face its layout row, render origin, crop box, placement in the unrolled board (offset,
-  width, x scale of the stretch), height `k`, radial distortion, and per registered frame its full path and
+  width, x scale: 1 for current builds, the stretch factor in mappings of older stretched builds), height `k`, radial distortion, and per registered frame its full path and
   homography (undistorted frame px → board units, `k` included); plus `px_per_unit`, the layout settings
   and the pieces with their x ranges. The `chain` field spells out the order of the steps.
 - `owner_<area>.png`: uint8, full resolution of the face crop; the index of the frame with the largest
