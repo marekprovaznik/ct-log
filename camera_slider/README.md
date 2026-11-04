@@ -102,6 +102,32 @@ Each unrolled board keeps the native resolution of its frames (spruce about 7.7 
 `python -m camera_slider.upload_supervisely --project_dir <out_root>/supervisely/camera_slider`; it
 creates the project with the classes and review tag of the meta project and uploads only missing pieces.
 
+## Stitch QA
+
+Lists stitched pieces and boards that are stitched wrongly, with a failure type, a score (1 = threshold)
+and the evidence. It works on any set of pieces (a builder output or an edited Supervisely copy); the
+builder's `report.json` / `mapping.json` and the raw frames add signals when given.
+
+```bash
+python -m camera_slider.stitch_qa --pieces_dir <pieces img dir> --out_dir <out> \
+    [--ann_dir <supervisely ann dir>] [--boards_dir <builder boards dir>] \
+    [--raw_root /mnt/D/datasets/camera_slider --frame_cache <dir>] [--labels <csv>]
+python -m camera_slider.stitch_qa_gallery --qa_dir <out> --pieces_dir <pieces img dir>
+```
+
+| Type | Signal |
+|---|---|
+| `face_order` | Faces in the wrong row order. Dark-spot and colour profiles along each face edge are correlated with every other face's opposite edge; each row cycle gets the mean match of its edges and is compared with `--order` (rows whose bottom edge meets the next row's top edge). Flagged per piece on a large margin, per board on the board mean, and for a whole build and species when one alternative cycle wins on most boards (sign test). |
+| `face_count` | Number of wood bands differs from the number of faces. |
+| `stray_segment` | Wood component outside every face (a sliver or an extra segment). |
+| `edge_step` | Step in a face's top or bottom edge, typically the adjacent face leaking into the face mask. |
+| `face_shift` | Faces misaligned along the board: lag of the edge profiles of adjacent faces (two-face boards: the dark-spot profiles of both faces), x offset of knots paired with `knot_id`, and the face length ratio before stretching from `report.json`. |
+| `bad_seam` | Frames disagree inside a face: worst tie-point seam of the frames in the piece (`report.json` + `mapping.json`), and with `--raw_root` the dense optical flow across the grain between consecutive frames warped through `mapping.json`. |
+
+Outputs: `pieces.csv` (all signals, `types`, `score`, `r_<type>` per type, `evidence`), `boards.csv`,
+`summary.json` (counts, thresholds, and per-type precision/recall with `--labels`, a CSV of `piece,types`
+with `;`-separated types and an empty value for clean pieces), and `gallery.html` from the gallery script.
+
 ## Data
 
 Scans by Matěj Šimek, 2026-10-28 (spruce) and 2026-10-30 (larch). The delivery is complete; there are no
