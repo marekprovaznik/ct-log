@@ -15,13 +15,14 @@ from PIL import Image
 from camera_slider.compose import FaceCrop, crop_board, layout_board, render_face
 from camera_slider.mapping import write_mapping
 from camera_slider.registration import (
-    to_strip_steps,
+    PositionPrior,
     FrameObs,
     PassRegistration,
     detect_frame,
     find_gaps,
     make_detector,
     register_pass,
+    to_strip_steps,
 )
 from camera_slider.wood import PairMatches, make_sift, match_features, wood_features
 
@@ -140,20 +141,22 @@ def stitch_faces(
     args: argparse.Namespace,
     px_per_unit: Optional[float] = None,
     render_paths: Optional[List[Path]] = None,
+    priors: Optional[List[Optional[PositionPrior]]] = None,
 ) -> Tuple[List[PassRegistration], List[FaceCrop], List[Dict], float]:
     geometries = [
         to_strip_steps(
             solve_face(
-            [observations[p] for p in group],
-            [features[p] for p in group],
-            args.min_markers,
-            args.outlier_px,
-            not args.no_height_correction,
-            args.workers,
-            not args.no_distortion,
+                [observations[p] for p in group],
+                [features[p] for p in group],
+                args.min_markers,
+                args.outlier_px,
+                not args.no_height_correction,
+                args.workers,
+                not args.no_distortion,
+                prior,
             )
         )
-        for group in groups
+        for group, prior in zip(groups, priors if priors is not None else [None] * len(groups))
     ]
     if px_per_unit is None:
         px_per_unit = float(np.median([g.marker_side_px for g in geometries]))
@@ -185,6 +188,7 @@ def solve_face(
     height_correction: bool,
     workers: int,
     distortion: bool = True,
+    prior: Optional[PositionPrior] = None,
 ) -> PassRegistration:
     candidates = [(a, b) for a in range(len(features)) for b in range(a + 1, min(a + 1 + MATCH_SPAN, len(features)))]
     with ThreadPoolExecutor(workers) as pool:
@@ -197,6 +201,7 @@ def solve_face(
         outlier_px=outlier_px,
         estimate_height=height_correction,
         estimate_distortion=distortion,
+        prior=prior,
     )
 
 

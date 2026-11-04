@@ -10,17 +10,18 @@ from typing import Dict, List, Optional, Tuple
 import cv2
 import numpy as np
 
-from camera_slider.compose import layout_board
+from camera_slider.compose import FaceCrop, layout_board
 from camera_slider.mapping import write_mapping
-from camera_slider.registration import FrameObs, detect_frame, make_detector
+from camera_slider.registration import FrameObs, PassRegistration, detect_frame, make_detector
 from camera_slider.scan_index import BoardMatch, index_frames, match_boards, read_logs, segment_frames
-from camera_slider.shots import PassShots, RailFit, assign_pass, camera_id, fit_rail
+from camera_slider.shots import PassShots, RailFit, assign_pass, camera_id, fit_rail, position_prior
 from camera_slider.stitch import load_image, stitch_faces
 from camera_slider.wood import make_sift, wood_features
 
 LOGGER = logging.getLogger(__name__)
 JPEG_MAX_SIDE = 65500
 FACE_ORDER = {4: "ABCD", 2: "AB"}
+ESP_END_FRAMES = 3
 MARKER_CACHE_VERSION = "v2"
 
 
@@ -47,6 +48,7 @@ def main() -> None:
     parser.add_argument("--max_reject_seam_px", type=float, default=5.0)
     parser.add_argument("--no_height_correction", action="store_true")
     parser.add_argument("--no_distortion", action="store_true", help="do not estimate radial lens distortion")
+    parser.add_argument("--no_esp_prior", action="store_true", help="do not use the ESP shot positions in registration")
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--skip_existing", action="store_true")
     parser.add_argument("--index_only", action="store_true")
@@ -120,15 +122,18 @@ def build_board(
     board_dir = args.out_root / "boards" / name
     board_dir.mkdir(parents=True, exist_ok=True)
     renders = [board_dir / f"render_{area}.jpg" for area in areas] if args.save_renders else None
-    geometries, crops, faces, px_per_unit = stitch_faces(groups, observations, features, args, render_paths=renders)
-    del features
-
-    shots = []
+    shots, priors = [], []
     t0 = segment.start
     for group, pass_number, idx in zip(groups, pass_numbers, [p for p in segment.passes]):
         frame_ms = np.array([(segment.times[i] - t0).total_seconds() * 1000 for i in idx])
         cams = np.array([camera_id(observations[p]) for p in group])
-        shots.append(assign_pass(frame_ms, log.rows[log.rows["pass"] == pass_number], cams, rail))
+        rows = log.rows[log.rows["pass"] == pass_number]
+        shots.append(assign_pass(frame_ms, rows, cams, rail))
+        priors.append(None if args.no_esp_prior else position_prior(shots[-1], rail, str(rows["dir"].iloc[0])))
+    geometries, crops, faces, px_per_unit = stitch_faces(
+        groups, observations, features, args, render_paths=renders, priors=priors
+    )
+    del features
 
     order = FACE_ORDER.get(len(crops), "".join(areas))
     ordered = sorted(range(len(crops)), key=lambda k: order.index(areas[k]) if areas[k] in order else k)
@@ -149,6 +154,15 @@ def build_board(
     px_per_mm = px_per_unit / rail.pitch_mm if rail is not None else None
     face_length_mm = (
         {areas[k]: round(crops[k].image.shape[1] / px_per_mm, 2) for k in ordered} if px_per_mm else None
+    )
+    directions = [str(log.rows.loc[log.rows["pass"] == p, "dir"].iloc[0]) for p in pass_numbers]
+    esp_length_mm = (
+        {
+            areas[k]: esp_face_length(geometries[k], crops[k], shots[k], rail, directions[k], observations[groups[k][0]].shape)
+            for k in ordered
+        }
+        if rail is not None
+        else None
     )
     rejected = reject_reasons(faces, len(crops), log.passes, args.max_reject_seam_px)
     rejected += length_reasons(face_length_mm, args.max_face_length_diff_mm)
@@ -183,6 +197,7 @@ def build_board(
         "face_length_diff_mm": round(max(face_length_mm.values()) - min(face_length_mm.values()), 2)
         if face_length_mm
         else None,
+        "face_length_esp_mm": esp_length_mm,
         "px_per_marker_step": px_per_unit,
         "marker_side_mm": marker_side_mm,
         "px_per_mm": px_per_mm,
@@ -211,6 +226,33 @@ def reject_reasons(faces: List[Dict], n_faces: int, n_passes: int, max_seam_px: 
         if face["seam_max_px"] is None or face["seam_max_px"] > max_seam_px:
             reasons.append(f"face {face['face']}: seam {face['seam_max_px']} px")
     return reasons
+
+
+def esp_face_length(
+    geometry: PassRegistration,
+    crop: FaceCrop,
+    shots: PassShots,
+    rail: RailFit,
+    direction: str,
+    frame_shape: Tuple[int, int],
+    n_frames: int = ESP_END_FRAMES,
+) -> Optional[float]:
+    offset = rail.offset_mm.get(direction, float(np.mean(list(rail.offset_mm.values()))))
+    centre = np.array([frame_shape[1] / 2, frame_shape[0] / 2, 1.0])
+    cams, esp = [], []
+    for fit, esp_mm in zip(geometry.frames, shots.esp_mm):
+        if fit.registered and np.isfinite(esp_mm):
+            p = fit.transform @ centre
+            cams.append(p[0] / p[2])
+            esp.append((esp_mm - offset) / rail.pitch_mm)
+    if len(cams) < 2 * n_frames:
+        return None
+    cams_arr, esp_arr = np.array(cams), np.array(esp)
+    order = np.argsort(cams_arr)
+    start = float(np.median((esp_arr - cams_arr)[order[:n_frames]]))
+    end = float(np.median((esp_arr - cams_arr)[order[-n_frames:]]))
+    x0, x1 = crop.x_range
+    return round(((x1 + end) - (x0 + start)) * rail.pitch_mm, 2)
 
 
 def length_reasons(face_length_mm: Optional[Dict[str, float]], max_diff_mm: float) -> List[str]:

@@ -19,6 +19,9 @@ K_BOUNDS = (0.5, 2.0)
 INIT_RANSAC_UNITS = 0.25
 INIT_SCALE_TOLERANCE = 0.2
 DIST_BOUNDS = (-0.5, 0.5)
+STRIP_PARAMS = 4
+STRIP_SIGMA_UNITS = 0.02
+STRIP_SIGMA_RAD = 0.01
 
 
 @dataclasses.dataclass
@@ -67,6 +70,12 @@ class PassRegistration:
 
 
 @dataclasses.dataclass
+class PositionPrior:
+    steps: np.ndarray
+    sigma: np.ndarray
+
+
+@dataclasses.dataclass
 class FrameGap:
     after: str
     before: str
@@ -90,6 +99,11 @@ class _Problem:
     side_px: float
     estimate_k: bool
     estimate_dist: bool
+    marker_ids: np.ndarray
+    strip_turn: float
+    prior_frame: np.ndarray
+    prior_steps: np.ndarray
+    prior_sigma: np.ndarray
 
 
 def make_detector() -> cv2.aruco.ArucoDetector:
@@ -114,6 +128,7 @@ def register_pass(
     estimate_distortion: bool = True,
     max_ties_per_pair: int = 50,
     seed: int = 0,
+    prior: Optional[PositionPrior] = None,
 ) -> PassRegistration:
     sides = [_marker_side(o.corners) for o in observations if len(o.ids)]
     if not sides:
@@ -142,6 +157,7 @@ def register_pass(
             side_px,
             estimate_height,
             estimate_distortion,
+            prior,
         )
         poses, transforms, k, dist = _solve(problem, poses, transforms, k, dist, robust_scale_px)
         distortion = Distortion(float(dist[0]), float(dist[1]), (float(principal[0]), float(principal[1])), radius)
@@ -331,6 +347,7 @@ def _build_problem(
     side_px: float,
     estimate_k: bool,
     estimate_dist: bool,
+    prior: Optional[PositionPrior] = None,
 ) -> _Problem:
     frames = sorted(transforms)
     frame_index = {f: j for j, f in enumerate(frames)}
@@ -350,6 +367,9 @@ def _build_problem(
         for p, x in zip(pairs, excluded_ties)
         if p.a in frame_index and p.b in frame_index and (~x).any()
     ]
+    with_prior = [
+        f for f in frames if prior is not None and np.isfinite(prior.steps[f]) and np.isfinite(prior.sigma[f])
+    ]
     return _Problem(
         frames=frames,
         markers=markers,
@@ -365,7 +385,26 @@ def _build_problem(
         side_px=side_px,
         estimate_k=estimate_k,
         estimate_dist=estimate_dist,
+        marker_ids=np.array(markers, float),
+        strip_turn=_strip_turn(np.stack([poses[m] for m in markers]), np.array(markers, float)),
+        prior_frame=np.array([frame_index[f] for f in with_prior], int),
+        prior_steps=np.array([prior.steps[f] for f in with_prior]) if with_prior else np.zeros(0),
+        prior_sigma=np.array([prior.sigma[f] for f in with_prior]) if with_prior else np.zeros(0),
     )
+
+
+def _strip_turn(poses: np.ndarray, ids: np.ndarray) -> float:
+    angle = _strip_line(poses, ids)[2]
+    rel = np.angle(np.exp(1j * (poses[:, 2] - angle)))
+    return float(np.round(np.median(rel) / (np.pi / 2)) * np.pi / 2)
+
+
+def _strip_line(poses: np.ndarray, ids: np.ndarray) -> np.ndarray:
+    if len(ids) < 2 or np.ptp(ids) == 0:
+        return np.array([poses[0, 0], poses[0, 1], 0.0, 1.0])
+    bx, ax = np.polyfit(ids, poses[:, 0], 1)
+    by, ay = np.polyfit(ids, poses[:, 1], 1)
+    return np.array([ax, ay, np.arctan2(by, bx), np.hypot(bx, by)])
 
 
 def _solve(
@@ -379,14 +418,16 @@ def _solve(
     gauge = problem.markers[0]
     n_frame_cols = FRAME_PARAMS * len(problem.frames)
     n_marker_cols = MARKER_PARAMS * (len(problem.markers) - 1)
-    k_col = n_frame_cols + n_marker_cols
+    strip_col = n_frame_cols + n_marker_cols
+    k_col = strip_col + STRIP_PARAMS
 
-    def unpack(x: np.ndarray) -> Tuple[np.ndarray, np.ndarray, float, np.ndarray]:
+    def unpack(x: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float, np.ndarray]:
         h = np.concatenate([x[:n_frame_cols].reshape(-1, FRAME_PARAMS), np.ones((len(problem.frames), 1))], 1)
-        p = np.concatenate([poses[gauge][None], x[n_frame_cols:k_col].reshape(-1, 3)])
+        p = np.concatenate([poses[gauge][None], x[n_frame_cols:strip_col].reshape(-1, 3)])
         return (
             h.reshape(-1, 3, 3),
             p,
+            x[strip_col:k_col],
             x[k_col] if problem.estimate_k else k,
             x[-2:] if problem.estimate_dist else dist,
         )
@@ -395,11 +436,13 @@ def _solve(
         return _residuals(problem, *unpack(x))
 
     def jacobian(x: np.ndarray) -> np.ndarray:
-        return _jacobian(problem, *unpack(x), n_frame_cols, len(x))
+        return _jacobian(problem, *unpack(x), n_frame_cols, strip_col, len(x))
 
+    marker_poses = np.stack([poses[m] for m in problem.markers])
     x0 = np.concatenate(
         [(transforms[f] / transforms[f][2, 2]).ravel()[:FRAME_PARAMS] for f in problem.frames]
         + [poses[m] for m in problem.markers[1:]]
+        + [_strip_line(marker_poses, problem.marker_ids)]
         + ([np.array([k])] if problem.estimate_k else [])
         + ([dist] if problem.estimate_dist else [])
     )
@@ -425,23 +468,105 @@ def _solve(
         np.sqrt(np.mean(result.fun**2)),
         result.nfev,
     )
-    h, p, k, dist = unpack(result.x)
+    h, p, _, k, dist = unpack(result.x)
     new_poses = dict(poses)
     new_poses.update(zip(problem.markers, p))
     return new_poses, {f: h[j] for j, f in enumerate(problem.frames)}, float(k), np.asarray(dist, float)
 
 
-def _residuals(problem: _Problem, h: np.ndarray, p: np.ndarray, k: float, d: np.ndarray) -> np.ndarray:
+def _residuals(
+    problem: _Problem, h: np.ndarray, p: np.ndarray, strip: np.ndarray, k: float, d: np.ndarray
+) -> np.ndarray:
     corners = marker_corners(p)[problem.obs_marker].reshape(-1, 2)
     obs_frame = np.repeat(problem.obs_frame, 4)
     c, r = problem.principal, problem.radius
     obs_canon, _, _ = _project(h[obs_frame], _undistort(problem.obs_xy.reshape(-1, 2), d, c, r))
     ta, _, _ = _project(h[problem.tie_a], _shrink(_undistort(problem.tie_ua, d, c, r), k, c))
     tb, _, _ = _project(h[problem.tie_b], _shrink(_undistort(problem.tie_ub, d, c, r), k, c))
-    return problem.side_px * np.concatenate([(obs_canon - corners).ravel(), (ta - tb).ravel()])
+    image = problem.side_px * np.concatenate([(obs_canon - corners).ravel(), (ta - tb).ravel()])
+    return np.concatenate([image, _strip_residuals(problem, p, strip), _prior_residuals(problem, h, strip)])
+
+
+def _strip_residuals(problem: _Problem, p: np.ndarray, strip: np.ndarray) -> np.ndarray:
+    u = np.array([np.cos(strip[2]), np.sin(strip[2])])
+    predicted = strip[:2] + problem.marker_ids[:, None] * strip[3] * u
+    xy = (p[:, :2] - predicted) / STRIP_SIGMA_UNITS
+    theta = np.angle(np.exp(1j * (p[:, 2] - strip[2] - problem.strip_turn))) / STRIP_SIGMA_RAD
+    return np.concatenate([xy.ravel(), theta])
+
+
+def _prior_residuals(problem: _Problem, h: np.ndarray, strip: np.ndarray) -> np.ndarray:
+    if len(problem.prior_frame) == 0:
+        return np.zeros(0)
+    centre, _, _ = _project(h[problem.prior_frame], np.repeat(problem.principal[None], len(problem.prior_frame), 0))
+    u = np.array([np.cos(strip[2]), np.sin(strip[2])])
+    along = (centre - strip[:2]) @ u / strip[3]
+    return (along - problem.prior_steps) / problem.prior_sigma
 
 
 def _jacobian(
+    problem: _Problem,
+    h: np.ndarray,
+    p: np.ndarray,
+    strip: np.ndarray,
+    k: float,
+    d: np.ndarray,
+    n_frame_cols: int,
+    strip_col: int,
+    n_cols: int,
+) -> np.ndarray:
+    return np.concatenate(
+        [
+            _image_jacobian(problem, h, p, k, d, n_frame_cols, n_cols),
+            _strip_jacobian(problem, strip, n_frame_cols, strip_col, n_cols),
+            _prior_jacobian(problem, h, strip, strip_col, n_cols),
+        ]
+    )
+
+
+def _strip_jacobian(
+    problem: _Problem, strip: np.ndarray, n_frame_cols: int, strip_col: int, n_cols: int
+) -> np.ndarray:
+    n = len(problem.marker_ids)
+    jac = np.zeros((3 * n, n_cols))
+    u = np.array([np.cos(strip[2]), np.sin(strip[2])])
+    u_perp = np.array([-u[1], u[0]])
+    ids = problem.marker_ids
+    rows = np.arange(2 * n).reshape(n, 2)
+    free_cols = n_frame_cols + MARKER_PARAMS * np.arange(n - 1)
+    for axis in range(2):
+        jac[rows[1:, axis], free_cols + axis] = 1.0 / STRIP_SIGMA_UNITS
+        jac[rows[:, axis], strip_col + axis] = -1.0 / STRIP_SIGMA_UNITS
+        jac[rows[:, axis], strip_col + 2] = -ids * strip[3] * u_perp[axis] / STRIP_SIGMA_UNITS
+        jac[rows[:, axis], strip_col + 3] = -ids * u[axis] / STRIP_SIGMA_UNITS
+    theta_rows = 2 * n + np.arange(n)
+    jac[theta_rows[1:], free_cols + 2] = 1.0 / STRIP_SIGMA_RAD
+    jac[theta_rows, strip_col + 2] = -1.0 / STRIP_SIGMA_RAD
+    return jac
+
+
+def _prior_jacobian(problem: _Problem, h: np.ndarray, strip: np.ndarray, strip_col: int, n_cols: int) -> np.ndarray:
+    n = len(problem.prior_frame)
+    jac = np.zeros((n, n_cols))
+    if n == 0:
+        return jac
+    centre, d_h, _ = _project(h[problem.prior_frame], np.repeat(problem.principal[None], n, 0))
+    u = np.array([np.cos(strip[2]), np.sin(strip[2])])
+    u_perp = np.array([-u[1], u[0]])
+    scale = 1.0 / (strip[3] * problem.prior_sigma)
+    rows = np.arange(n)
+    jac[rows[:, None], FRAME_PARAMS * problem.prior_frame[:, None] + np.arange(FRAME_PARAMS)] = (
+        np.einsum("i,nij->nj", u, d_h) * scale[:, None]
+    )
+    rel = centre - strip[:2]
+    jac[rows, strip_col] = -u[0] * scale
+    jac[rows, strip_col + 1] = -u[1] * scale
+    jac[rows, strip_col + 2] = rel @ u_perp * scale
+    jac[rows, strip_col + 3] = -(rel @ u) / strip[3] * scale
+    return jac
+
+
+def _image_jacobian(
     problem: _Problem, h: np.ndarray, p: np.ndarray, k: float, d: np.ndarray, n_frame_cols: int, n_cols: int
 ) -> np.ndarray:
     n_pts, n_ties = 4 * len(problem.obs_frame), len(problem.tie_a)
