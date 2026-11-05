@@ -27,6 +27,7 @@ SEPARATOR_SCALE = 4
 SEPARATOR_MIN_H = 25
 SEPARATOR_BRIGHT = 90
 SEPARATOR_PITCH_TOLERANCE = 0.15
+SEPARATOR_SHIFT_CELLS = (0.0, -0.5, 0.5, -1.0, 1.0, -1.5, 1.5, -2.0, 2.0)
 PARTIAL_MIN_SEEN = 0.5
 PARTIAL_MAX_ERROR_RATE = 0.1
 PARTIAL_MIN_MARGIN_RATE = 0.2
@@ -239,7 +240,7 @@ def seed_from_separators(gray: np.ndarray, codes: np.ndarray) -> List[Candidate]
                 [centre_x - side / 2, bottom],
             ]
         )
-        candidate = decode_partial(gray, quad, codes)
+        candidate = decode_shifted(gray, quad, codes)
         if candidate is not None:
             found.append(candidate)
     return _unique_ids(_dedupe(found))
@@ -258,6 +259,16 @@ def separator_bars(gray: np.ndarray) -> List[Tuple[float, float, float, float]]:
         return []
     height = float(np.median([b[3] for b in centred]))
     return [b for b in centred if b[3] >= 0.5 * height]
+
+
+def decode_shifted(gray: np.ndarray, quad: np.ndarray, codes: np.ndarray) -> Optional[Candidate]:
+    cell = _side(quad) / CELLS
+    best: Optional[Candidate] = None
+    for shift in SEPARATOR_SHIFT_CELLS:
+        candidate = decode_partial(gray, quad + np.array([0.0, shift * cell]), codes)
+        if candidate is not None and (best is None or candidate.bit_errors < best.bit_errors):
+            best = candidate
+    return best
 
 
 def decode_partial(gray: np.ndarray, quad: np.ndarray, codes: np.ndarray) -> Optional[Candidate]:
