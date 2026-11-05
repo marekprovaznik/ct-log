@@ -100,8 +100,9 @@ python -m camera_slider.dataset \
    order in which adjacent faces share an edge, checked with knots crossing the edges) and `AB` for 2.
 5. **Reject** a board (no pieces, status `rejected: ...` in `manifest.csv`) when its CSV match is not
    `ok`, a face has uncovered columns, a seam exceeds `--max_reject_seam_px`, or the face lengths of the board
-   differ by more than `--max_face_length_diff_mm` (2 mm; a length mismatch is a stitching error, faces are
-   never stretched to hide it). `report.json` has `face_length_mm`, `face_length_diff_mm` and, as an
+   differ by more than `--max_face_length_diff_mm` (20 mm, which catches faces registered with missing parts;
+   faces are never stretched to hide a mismatch). A difference above `--flag_face_length_diff_mm` (2 mm) is
+   only listed in `flags` of `report.json` and `manifest.csv` for review. `report.json` has `face_length_mm`, `face_length_diff_mm` and, as an
    independent check, `face_length_esp_mm` (the marker length corrected by the ESP-minus-marker camera
    position at both ends of the face, median of 3 frames per end). Exceptions give `failed: ...`.
    `--skip_existing` resumes a run.

@@ -61,8 +61,14 @@ def main() -> None:
     parser.add_argument(
         "--max_face_length_diff_mm",
         type=float,
-        default=2.0,
+        default=20.0,
         help="reject a board whose faces differ in length by more than this",
+    )
+    parser.add_argument(
+        "--flag_face_length_diff_mm",
+        type=float,
+        default=2.0,
+        help="flag (not reject) a board whose faces differ in length by more than this",
     )
     parser.add_argument(
         "--save_renders", action="store_true", help="also write each face's stitched frames before masking"
@@ -174,6 +180,7 @@ def build_board(
     )
     rejected = reject_reasons(faces, len(crops), log.passes, args.max_reject_seam_px)
     rejected += length_reasons(face_length_mm, args.max_face_length_diff_mm)
+    flags = [] if rejected else length_reasons(face_length_mm, args.flag_face_length_diff_mm)
     pieces = [] if rejected else write_pieces(unrolled, name, args)
     mapping_bytes = write_mapping(
         board_dir,
@@ -194,6 +201,7 @@ def build_board(
     report = {
         "board": name,
         "status": f"rejected: {'; '.join(rejected)}" if rejected else "ok",
+        "flags": flags,
         "board_id": log.board,
         "block": match.block,
         "session": log.session,
@@ -469,6 +477,7 @@ def _manifest_row(report: Dict, faces: List[Dict], shots: List[PassShots], n_fra
         "height_k": "/".join(f"{f['height_scale_k']:.4f}" for f in faces),
         "px_per_mm": round(report["px_per_mm"], 3) if report["px_per_mm"] else "",
         "face_length_diff_mm": report["face_length_diff_mm"] if report["face_length_diff_mm"] is not None else "",
+        "flags": "; ".join(report["flags"]),
         "unrolled_h": report["unrolled_shape"][0],
         "unrolled_w": report["unrolled_shape"][1],
         "pieces": len(report["pieces"]),
