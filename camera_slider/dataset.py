@@ -1,4 +1,5 @@
 import argparse
+import dataclasses
 from concurrent.futures import ThreadPoolExecutor
 import csv
 import json
@@ -52,6 +53,11 @@ def main() -> None:
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--skip_existing", action="store_true")
     parser.add_argument("--index_only", action="store_true")
+    parser.add_argument("--cache_dir", type=Path, default=None, help="marker cache (default <out_root>/cache)")
+    parser.add_argument(
+        "--rails_json", type=Path, default=None, help="read the rail fits from here, or fit and write them"
+    )
+    parser.add_argument("--calibrate_only", action="store_true", help="stop after marker detection and rail fit")
     parser.add_argument(
         "--max_face_length_diff_mm",
         type=float,
@@ -82,8 +88,10 @@ def build_dataset(args: argparse.Namespace) -> None:
         boards = [m for m in boards if board_name(m, labels) in set(args.boards)]
 
     accepted = [m for m in boards if m.reason == "ok"]
-    observations = detect_all(accepted, args.out_root / "cache", args.workers)
-    rails = calibrate_rails(accepted, observations, labels)
+    observations = detect_all(accepted, args.cache_dir or args.out_root / "cache", args.workers)
+    rails = load_or_fit_rails(args.rails_json, accepted, observations, labels)
+    if args.calibrate_only:
+        return
     manifest_path = args.out_root / "manifest.csv"
     rows = _read_manifest(manifest_path)
     for match in boards:
@@ -317,6 +325,18 @@ def detect_all(boards: List[BoardMatch], cache_dir: Path, workers: int) -> Dict[
         observations.update(found)
         LOGGER.info("Markers detected for board %s (%d frames)", match.log.board, len(found))
     return observations
+
+
+def load_or_fit_rails(
+    path: Optional[Path], boards: List[BoardMatch], observations: Dict[Path, FrameObs], labels: Dict[str, str]
+) -> Dict[str, RailFit]:
+    if path is not None and path.exists():
+        LOGGER.info("Rails read from %s", path)
+        return {block: RailFit(**fit) for block, fit in json.loads(path.read_text()).items()}
+    rails = calibrate_rails(boards, observations, labels)
+    if path is not None:
+        path.write_text(json.dumps({block: dataclasses.asdict(fit) for block, fit in rails.items()}, indent=1))
+    return rails
 
 
 def calibrate_rails(
