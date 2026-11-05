@@ -167,7 +167,12 @@ def build_board(
     mm_per_step = args.mm_per_step or (rail.pitch_mm if rail is not None else None)
     marker_side_mm = mm_per_step / marker_pitch_units if mm_per_step else None
     px_per_mm = px_per_unit / mm_per_step if mm_per_step else None
-    face_length_mm = {areas[k]: round(crops[k].image.shape[1] / px_per_mm, 2) for k in ordered} if px_per_mm else None
+    face_length_mm = {areas[k]: round(crops[k].length_px / px_per_mm, 2) for k in ordered} if px_per_mm else None
+    face_length_edges_mm = (
+        {areas[k]: [round((e - s) / px_per_mm, 2) for s, e in crops[k].edge_spans] for k in ordered}
+        if px_per_mm
+        else None
+    )
     directions = [str(log.rows.loc[log.rows["pass"] == p, "dir"].iloc[0]) for p in pass_numbers]
     esp_steps = (
         {
@@ -215,6 +220,7 @@ def build_board(
         "mtime_check": match.mtime_check,
         "face_order": [areas[k] for k in ordered],
         "face_length_mm": face_length_mm,
+        "face_length_edges_mm": face_length_edges_mm,
         "face_length_diff_mm": round(max(face_length_mm.values()) - min(face_length_mm.values()), 2)
         if face_length_mm
         else None,

@@ -150,6 +150,18 @@ def test_group_passes_needs_capture_times() -> None:
         group_passes([Path("a.jpg")], [None], gap_s=3.0)
 
 
+def test_segment_board_follows_skewed_ends() -> None:
+    """The mask ends follow slanted board ends, so the length differs between the long edges."""
+    image = np.zeros((400, 1000, 3), np.uint8)
+    corners = np.array([[100, 50], [900, 50], [930, 350], [80, 350]], np.int32)
+    cv2.fillPoly(image, [corners], (60, 130, 200))
+    mask = segment_board(image, scale=1, edge_window=51, smooth_px=11, edge_margin=10, reference_window=101)
+    top = np.flatnonzero(mask[60])
+    bottom = np.flatnonzero(mask[340])
+    assert abs(top[0] - 99) <= 4 and abs(top[-1] - 901) <= 4
+    assert abs(bottom[0] - 81) <= 4 and abs(bottom[-1] - 929) <= 4
+
+
 def test_segment_board_fills_dark_defects() -> None:
     """A dark knot inside the board stays part of the board mask; the strip and background do not."""
     image = np.zeros((200, 400, 3), np.uint8)

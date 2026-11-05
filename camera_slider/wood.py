@@ -9,6 +9,10 @@ from scipy.ndimage import median_filter, uniform_filter1d
 LOGGER = logging.getLogger(__name__)
 SIFT_CONTRAST = 0.01
 SIFT_FEATURES = 4000
+MAX_END_SLOPE = 0.14
+END_WINDOW_FRAC = 0.15
+END_ROW_MARGIN = 0.08
+END_MIN_ROW_FRAC = 0.5
 
 
 @dataclasses.dataclass
@@ -86,7 +90,7 @@ def segment_board(
     if edges is None:
         msg = "No timber found"
         raise ValueError(msg)
-    return _draw_band(image.shape[:2], *edges, scale)
+    return _draw_band(image.shape[:2], *edges, _end_lines(wood, *edges), scale)
 
 
 def wood_features(image: np.ndarray, sift: cv2.SIFT, scale: float = 0.5) -> Tuple[np.ndarray, Optional[np.ndarray]]:
@@ -120,16 +124,69 @@ def match_features(
 
 
 def _draw_band(
-    shape: Tuple[int, int], columns: np.ndarray, top: np.ndarray, bottom: np.ndarray, scale: int
+    shape: Tuple[int, int],
+    columns: np.ndarray,
+    top: np.ndarray,
+    bottom: np.ndarray,
+    ends: Tuple[Tuple[float, float], Tuple[float, float]],
+    scale: int,
 ) -> np.ndarray:
+    (a0, b0), (a1, b1) = ends
+    y_span = np.array([top.min(), bottom.max()])
     xs = (np.arange(shape[1]) + 0.5) / scale - 0.5
-    inside = (xs >= columns[0] - 0.5) & (xs <= columns[-1] + 0.5)
+    inside = (xs >= (a0 + b0 * y_span).min()) & (xs <= (a1 + b1 * y_span).max())
     rows = np.arange(shape[0])[:, None] + 0.5
+    y = rows / scale - 0.5
     band = np.zeros(shape, bool)
-    band[:, inside] = (rows >= np.interp(xs[inside], columns, top) * scale) & (
-        rows < np.interp(xs[inside], columns, bottom) * scale
+    band[:, inside] = (
+        (rows >= np.interp(xs[inside], columns, top) * scale)
+        & (rows < np.interp(xs[inside], columns, bottom) * scale)
+        & (xs[inside] >= a0 + b0 * y)
+        & (xs[inside] <= a1 + b1 * y)
     )
     return band
+
+
+def _end_lines(
+    wood: np.ndarray, columns: np.ndarray, top: np.ndarray, bottom: np.ndarray
+) -> Tuple[Tuple[float, float], Tuple[float, float]]:
+    return (
+        _end_line(wood, int(columns[0]), float(top[0]), float(bottom[0]), 0),
+        _end_line(wood, int(columns[-1]), float(top[-1]), float(bottom[-1]), 1),
+    )
+
+
+def _end_line(wood: np.ndarray, column: int, top: float, bottom: float, side: int) -> Tuple[float, float]:
+    """Fits x = a + b y to one board end, as the outer boundary of the wood per row."""
+    vertical = (column - 0.5, 0.0) if side == 0 else (column + 0.5, 0.0)
+    height = bottom - top
+    half = max(20, int(END_WINDOW_FRAC * height))
+    lo, hi = max(0, column - half), min(wood.shape[1], column + half + 1)
+    first = int(top + END_ROW_MARGIN * height)
+    last = int(bottom - END_ROW_MARGIN * height)
+    rows, ends = [], []
+    for row in range(first, last):
+        start, end = _longest_run(wood[row, lo:hi])
+        position = lo + (start if side == 0 else end)
+        if end > start and lo < position < hi:
+            rows.append(row)
+            ends.append(position - 0.5)
+    if len(rows) < END_MIN_ROW_FRAC * max(1, last - first):
+        return vertical
+    a, b, kept = _robust_line(np.array(rows, float), np.array(ends, float))
+    if abs(b) > MAX_END_SLOPE or kept < END_MIN_ROW_FRAC * (last - first):
+        return vertical
+    return a, b
+
+
+def _robust_line(rows: np.ndarray, ends: np.ndarray) -> Tuple[float, float, int]:
+    keep = np.ones(len(rows), bool)
+    a, b = 0.0, 0.0
+    for _ in range(4):
+        b, a = np.polyfit(rows[keep], ends[keep], 1)
+        residual = ends - (a + b * rows)
+        keep = np.abs(residual) < 3 * max(1.0, 1.48 * float(np.median(np.abs(residual[keep]))))
+    return float(a), float(b), int(keep.sum())
 
 
 def _column_edges(

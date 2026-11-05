@@ -146,6 +146,12 @@ def test_layout_placements_keep_face_length() -> None:
     assert all(p.scale_x == 1.0 for p in placements)
 
 
+def test_layout_placements_align_face_centres() -> None:
+    """Faces with skewed ends are aligned by the centre of their mid-width span, not of their bounding box."""
+    placements = layout_placements([(10, 100), (10, 110)], gap=3, margin=2, centres=[50.0, 60.0])
+    assert [p.x for p in placements] == [12, 2]
+
+
 def test_stretched_placement_from_old_mapping_round_trip() -> None:
     """A stretched placement recorded by an older build still maps crop px to unrolled px and back."""
     face = FaceMap("A", 0, (0.0, 0.0), (0, 0, 110, 20), FacePlacement(2, 2, 100, 20, 100 / 110), 1.0, 1.0, None, [], None)

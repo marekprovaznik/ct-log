@@ -82,7 +82,9 @@ def write_mapping(
     gap: int,
     margin: int,
 ) -> int:
-    placements = layout_placements([crops[k].image.shape[:2] for k in ordered], gap, margin)
+    placements = layout_placements(
+        [crops[k].image.shape[:2] for k in ordered], gap, margin, [crops[k].centre_px for k in ordered]
+    )
     rows = {k: row for row, k in enumerate(ordered)}
     faces = []
     n_bytes = 0

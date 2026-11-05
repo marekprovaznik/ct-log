@@ -1,4 +1,5 @@
 import dataclasses
+import math
 from typing import Callable, Dict, List, Optional, Tuple
 
 import cv2
@@ -8,6 +9,7 @@ from camera_slider.registration import Distortion, undistort_maps, undistort_poi
 from camera_slider.wood import segment_board
 
 NO_OWNER = 255
+END_REACH_FRAC = 0.15
 
 
 @dataclasses.dataclass
@@ -28,6 +30,18 @@ class FaceCrop:
     uncovered_columns: int
     owner: np.ndarray
     origin: Tuple[float, float]
+    mid_span: Optional[Tuple[int, int]] = None
+    edge_spans: Optional[Tuple[Tuple[int, int], Tuple[int, int]]] = None
+
+    @property
+    def length_px(self) -> int:
+        start, end = self.mid_span or (0, self.image.shape[1])
+        return end - start
+
+    @property
+    def centre_px(self) -> float:
+        start, end = self.mid_span or (0, self.image.shape[1])
+        return (start + end) / 2
 
 
 @dataclasses.dataclass
@@ -110,13 +124,29 @@ def crop_board(render: FaceRender) -> FaceCrop:
     uncovered = int((~band.all(0)).sum())
     mask = board[y0:y1, x0:x1]
     image = render.image[y0:y1, x0:x1] * mask[..., None]
-    x_range = (render.origin[0] + x0 / render.px_per_unit, render.origin[0] + x1 / render.px_per_unit)
-    return FaceCrop(image, mask, (x0, y0, x1, y1), x_range, uncovered, render.owner[y0:y1, x0:x1], render.origin)
+    height = y1 - y0
+    mid_span = _row_span(mask, height // 2)
+    edge_spans = _edge_spans(mask, mid_span)
+    x_range = (
+        render.origin[0] + (x0 + mid_span[0]) / render.px_per_unit,
+        render.origin[0] + (x0 + mid_span[1]) / render.px_per_unit,
+    )
+    return FaceCrop(
+        image,
+        mask,
+        (x0, y0, x1, y1),
+        x_range,
+        uncovered,
+        render.owner[y0:y1, x0:x1],
+        render.origin,
+        mid_span,
+        edge_spans,
+    )
 
 
 def layout_board(crops: List[FaceCrop], gap: int = 40, margin: int = 40) -> np.ndarray:
-    placements = layout_placements([c.image.shape[:2] for c in crops], gap, margin)
-    width = max(p.width for p in placements) + 2 * margin
+    placements = layout_placements([c.image.shape[:2] for c in crops], gap, margin, [c.centre_px for c in crops])
+    width = max(p.x + p.width for p in placements) + margin
     height = sum(p.height for p in placements) + gap * (len(placements) - 1) + 2 * margin
     board = np.zeros((height, width, 3), np.uint8)
     for crop, p in zip(crops, placements):
@@ -124,14 +154,37 @@ def layout_board(crops: List[FaceCrop], gap: int = 40, margin: int = 40) -> np.n
     return board
 
 
-def layout_placements(shapes: List[Tuple[int, int]], gap: int = 40, margin: int = 40) -> List[FacePlacement]:
-    width = max(w for _, w in shapes) + 2 * margin
+def layout_placements(
+    shapes: List[Tuple[int, int]], gap: int = 40, margin: int = 40, centres: Optional[List[float]] = None
+) -> List[FacePlacement]:
+    centres = centres if centres is not None else [w / 2 for _, w in shapes]
+    furthest = max(centres)
     placements = []
     y = margin
-    for h, w in shapes:
-        placements.append(FacePlacement((width - w) // 2, y, w, h, 1.0))
+    for (h, w), centre in zip(shapes, centres):
+        placements.append(FacePlacement(margin + math.floor(furthest - centre), y, w, h, 1.0))
         y += h + gap
     return placements
+
+
+def _row_span(mask: np.ndarray, row: int) -> Tuple[int, int]:
+    xs = np.flatnonzero(mask[row])
+    return (int(xs[0]), int(xs[-1]) + 1) if len(xs) else (0, mask.shape[1])
+
+
+def _edge_spans(mask: np.ndarray, mid_span: Tuple[int, int]) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+    height, width = mask.shape
+    filled = mask.any(1)
+    first = mask.argmax(1)
+    last = width - mask[:, ::-1].argmax(1)
+    reach = int(END_REACH_FRAC * height) + 1
+    left = np.flatnonzero(filled & (first <= mid_span[0] + reach))
+    right = np.flatnonzero(filled & (last >= mid_span[1] - reach))
+    k_left, k_right = len(left) // 20, len(right) // 20
+    return (
+        (int(first[left[k_left]]), int(last[right[k_right]])),
+        (int(first[left[-1 - k_left]]), int(last[right[-1 - k_right]])),
+    )
 
 
 def _footprint(hom: np.ndarray, shape: Tuple[int, int], distortion: Optional[Distortion] = None) -> np.ndarray:
