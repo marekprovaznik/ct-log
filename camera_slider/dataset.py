@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 import csv
 import dataclasses
 import json
+import os
 import logging
 from pathlib import Path
 import pickle
@@ -508,10 +509,14 @@ def _read_manifest(path: Path) -> Dict[str, Dict]:
 
 def _write_manifest(path: Path, rows: Dict[str, Dict]) -> None:
     fields = list(dict.fromkeys(k for row in rows.values() for k in row))
-    with path.open("w", newline="") as f:
+    temporary = path.with_suffix(".csv.tmp")
+    with temporary.open("w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
         writer.writerows(rows[k] for k in sorted(rows))
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(temporary, path)
 
 
 def _save(path: Path, image: np.ndarray) -> Path:
