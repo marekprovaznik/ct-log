@@ -65,16 +65,10 @@ def main() -> None:
         help="mm per marker step from the tape calibration (default: the ESP rail fit)",
     )
     parser.add_argument(
-        "--max_face_length_diff_mm",
-        type=float,
-        default=20.0,
-        help="reject a board whose faces differ in length by more than this",
-    )
-    parser.add_argument(
         "--flag_face_length_diff_mm",
         type=float,
         default=2.0,
-        help="flag (not reject) a board whose faces differ in length by more than this",
+        help="flag a board whose faces differ in length by more than this",
     )
     parser.add_argument(
         "--save_renders", action="store_true", help="also write each face's stitched frames before masking"
@@ -191,8 +185,7 @@ def build_board(
         else None
     )
     rejected = reject_reasons(faces, len(crops), log.passes, args.max_reject_seam_px)
-    rejected += length_reasons(face_length_mm, args.max_face_length_diff_mm)
-    flags = [] if rejected else length_reasons(face_length_mm, args.flag_face_length_diff_mm)
+    flags = length_reasons(face_length_mm, args.flag_face_length_diff_mm)
     pieces = [] if rejected else write_pieces(unrolled, name, args)
     mapping_bytes = write_mapping(
         board_dir,
