@@ -1,25 +1,29 @@
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 import dataclasses
+import functools
 import datetime
 import json
 import logging
 from pathlib import Path
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
 from PIL import Image
 
 from camera_slider.compose import FaceCrop, crop_board, layout_board, render_face
-from camera_slider.mapping import write_mapping
+from camera_slider.mapping import distort_points, write_mapping
+from camera_slider.markers import SOURCE_RECOVERED, dictionary_bits, refine_marker
 from camera_slider.registration import (
     FrameObs,
     PassRegistration,
     PositionPrior,
     detect_frame,
     find_gaps,
+    marker_corners,
+    marker_transform,
     make_detector,
     register_pass,
     to_strip_steps,
@@ -143,21 +147,25 @@ def stitch_faces(
     render_paths: Optional[List[Path]] = None,
     priors: Optional[List[Optional[PositionPrior]]] = None,
 ) -> Tuple[List[PassRegistration], List[FaceCrop], List[Dict], float]:
-    geometries = [
-        to_strip_steps(
-            solve_face(
-                [observations[p] for p in group],
-                [features[p] for p in group],
-                args.min_markers,
-                args.outlier_px,
-                not args.no_height_correction,
-                args.workers,
-                not args.no_distortion,
-                prior,
-            )
+    geometries = []
+    for group, prior in zip(groups, priors if priors is not None else [None] * len(groups)):
+        solve = functools.partial(
+            solve_face,
+            features=[features[p] for p in group],
+            min_markers=args.min_markers,
+            outlier_px=args.outlier_px,
+            height_correction=not args.no_height_correction,
+            workers=args.workers,
+            distortion=not args.no_distortion,
+            prior=prior,
         )
-        for group, prior in zip(groups, priors if priors is not None else [None] * len(groups))
-    ]
+        pass_obs = [observations[p] for p in group]
+        geometry = solve(pass_obs)
+        recovered = recover_weak_frames(pass_obs, geometry, lambda i: load_image(group[i]))
+        if recovered is not None:
+            geometry = solve(recovered)
+            observations.update(zip(group, recovered))
+        geometries.append(to_strip_steps(geometry))
     if px_per_unit is None:
         px_per_unit = float(np.median([g.marker_side_px for g in geometries]))
     crops, faces = [], []
@@ -173,6 +181,49 @@ def stitch_faces(
         crops.append(crop)
         faces.append(face_report(face, group, shapes, geometry, crop, args.max_seam_px))
     return geometries, crops, faces, px_per_unit
+
+
+def recover_weak_frames(
+    observations: List[FrameObs], geometry: PassRegistration, load: Callable[[int], np.ndarray]
+) -> Optional[List[FrameObs]]:
+    weak = [
+        i for i, (obs, fit) in enumerate(zip(observations, geometry.frames)) if fit.registered and len(obs.ids) < 2
+    ]
+    if not weak or len(geometry.marker_poses) < 2:
+        return None
+    codes = dictionary_bits()
+    ids = np.array(sorted(geometry.marker_poses))
+    board_corners = marker_corners(np.stack([geometry.marker_poses[m] for m in ids]))
+    updated = list(observations)
+    added = 0
+    for i in weak:
+        obs = observations[i]
+        gray = cv2.cvtColor(load(i), cv2.COLOR_BGR2GRAY)
+        to_frame = np.linalg.inv(marker_transform(geometry.frames[i], geometry.height_k, obs.shape))
+        flat = cv2.perspectiveTransform(board_corners.reshape(1, -1, 2), to_frame)[0]
+        raw = distort_points(flat, geometry.distortion).reshape(-1, 4, 2)
+        found = {int(m): c for m, c in zip(obs.ids, obs.corners)}
+        sources = {int(m): int(s) for m, s in zip(obs.ids, obs.source)} if len(obs.source) == len(obs.ids) else {}
+        h, w = obs.shape
+        for marker_id, corners in zip(ids, raw):
+            x, y = corners.mean(0)
+            if int(marker_id) in found or not (0 <= x < w and 0 <= y < h) or marker_id >= len(codes):
+                continue
+            refined = refine_marker(gray, corners, codes[marker_id])
+            if refined is not None:
+                found[int(marker_id)] = refined[0]
+                sources[int(marker_id)] = SOURCE_RECOVERED
+        if len(found) > len(obs.ids):
+            added += len(found) - len(obs.ids)
+            keys = sorted(found)
+            updated[i] = dataclasses.replace(
+                obs,
+                ids=np.array(keys),
+                corners=np.stack([found[k] for k in keys]),
+                source=np.array([sources.get(k, SOURCE_RECOVERED) for k in keys]),
+            )
+    LOGGER.info("Projected markers into %d weak frames: %d markers recovered", len(weak), added)
+    return updated if added else None
 
 
 def analyse_frame(path: Path) -> Tuple[FrameObs, Tuple[np.ndarray, Optional[np.ndarray]]]:

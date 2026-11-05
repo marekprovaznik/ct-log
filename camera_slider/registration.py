@@ -759,6 +759,12 @@ def _align_to_strip(
     return new_poses, {f: affine @ t for f, t in transforms.items()}, float(pitch)
 
 
+def marker_transform(fit: FrameFit, k: float, shape: Tuple[int, int]) -> np.ndarray:
+    principal = np.array([shape[1] / 2, shape[0] / 2])
+    shrink = np.array([[1 / k, 0, principal[0] * (1 - 1 / k)], [0, 1 / k, principal[1] * (1 - 1 / k)], [0, 0, 1]])
+    return fit.transform @ np.linalg.inv(shrink)
+
+
 def _wood_transform(transform: np.ndarray, k: float, principal: np.ndarray) -> np.ndarray:
     shrink = np.array([[1 / k, 0, principal[0] * (1 - 1 / k)], [0, 1 / k, principal[1] * (1 - 1 / k)], [0, 0, 1]])
     return transform @ shrink
