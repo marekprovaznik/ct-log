@@ -107,6 +107,16 @@ python -m camera_slider.dataset \
    position at both ends of the face, median of 3 frames per end). Exceptions give `failed: ...`.
    `--skip_existing` resumes a run.
 
+**Scale.** Lengths in mm are marker steps times `--mm_per_step`, measured with a tape measure by
+[tape_calibration.py](tape_calibration.py): the two calibration passes (a tape laid along the strip) are stitched
+like a face, the red 10 cm labels of the tape are located along the stitched pass, and mm is fitted
+against the strip position. Every gap between labels must be exactly 10 cm, otherwise the pass is refused.
+Without `--mm_per_step` the ESP rail fit is used, which varies by up to ±0.16 % between sessions.
+
+```bash
+python -m camera_slider.tape_calibration --scan_root <Optical_scan_Marek> <raw/board_64> --out_dir <derived>/tape_calibration
+```
+
 A build can be split into shards that share one marker cache and one rail fit: run once with all boards
 and `--cache_dir <dir> --rails_json <file> --calibrate_only`, then each shard with `--boards ...` and the
 same two options.

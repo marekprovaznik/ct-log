@@ -1,7 +1,7 @@
 import argparse
-import dataclasses
 from concurrent.futures import ThreadPoolExecutor
 import csv
+import dataclasses
 import json
 import logging
 from pathlib import Path
@@ -58,6 +58,12 @@ def main() -> None:
         "--rails_json", type=Path, default=None, help="read the rail fits from here, or fit and write them"
     )
     parser.add_argument("--calibrate_only", action="store_true", help="stop after marker detection and rail fit")
+    parser.add_argument(
+        "--mm_per_step",
+        type=float,
+        default=None,
+        help="mm per marker step from the tape calibration (default: the ESP rail fit)",
+    )
     parser.add_argument(
         "--max_face_length_diff_mm",
         type=float,
@@ -164,18 +170,24 @@ def build_board(
         [cv2.IMWRITE_JPEG_QUALITY, 90],
     )
     marker_pitch_units = float(np.median([g.pitch for g in geometries]))
-    marker_side_mm = rail.pitch_mm / marker_pitch_units if rail is not None else None
-    px_per_mm = px_per_unit / rail.pitch_mm if rail is not None else None
-    face_length_mm = (
-        {areas[k]: round(crops[k].image.shape[1] / px_per_mm, 2) for k in ordered} if px_per_mm else None
-    )
+    mm_per_step = args.mm_per_step or (rail.pitch_mm if rail is not None else None)
+    marker_side_mm = mm_per_step / marker_pitch_units if mm_per_step else None
+    px_per_mm = px_per_unit / mm_per_step if mm_per_step else None
+    face_length_mm = {areas[k]: round(crops[k].image.shape[1] / px_per_mm, 2) for k in ordered} if px_per_mm else None
     directions = [str(log.rows.loc[log.rows["pass"] == p, "dir"].iloc[0]) for p in pass_numbers]
-    esp_length_mm = (
+    esp_steps = (
         {
-            areas[k]: esp_face_length(geometries[k], crops[k], shots[k], rail, directions[k], observations[groups[k][0]].shape)
+            areas[k]: esp_face_length(
+                geometries[k], crops[k], shots[k], rail, directions[k], observations[groups[k][0]].shape
+            )
             for k in ordered
         }
-        if rail is not None
+        if rail is not None and mm_per_step
+        else {}
+    )
+    esp_length_mm = (
+        {area: round(steps * mm_per_step, 2) if steps is not None else None for area, steps in esp_steps.items()}
+        if esp_steps
         else None
     )
     rejected = reject_reasons(faces, len(crops), log.passes, args.max_reject_seam_px)
@@ -218,6 +230,8 @@ def build_board(
         "marker_side_mm": marker_side_mm,
         "px_per_mm": px_per_mm,
         "rail_pitch_mm": rail.pitch_mm if rail is not None else None,
+        "mm_per_step": mm_per_step,
+        "mm_scale": "tape" if args.mm_per_step else "rail",
         "unrolled": unrolled_path.name,
         "unrolled_shape": list(unrolled.shape[:2]),
         "pieces": pieces,
@@ -268,7 +282,7 @@ def esp_face_length(
     start = float(np.median((esp_arr - cams_arr)[order[:n_frames]]))
     end = float(np.median((esp_arr - cams_arr)[order[-n_frames:]]))
     x0, x1 = crop.x_range
-    return round(((x1 + end) - (x0 + start)) * rail.pitch_mm, 2)
+    return round((x1 + end) - (x0 + start), 4)
 
 
 def length_reasons(face_length_mm: Optional[Dict[str, float]], max_diff_mm: float) -> List[str]:
