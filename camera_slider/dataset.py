@@ -11,6 +11,7 @@ import cv2
 import numpy as np
 
 from camera_slider.compose import layout_board
+from camera_slider.mapping import write_mapping
 from camera_slider.registration import FrameObs, detect_frame, make_detector
 from camera_slider.scan_index import BoardMatch, index_frames, match_boards, read_logs, segment_frames
 from camera_slider.shots import PassShots, RailFit, assign_pass, camera_id, fit_rail
@@ -143,6 +144,22 @@ def build_board(
     )
     rejected = reject_reasons(faces, len(crops), log.passes, args.max_reject_seam_px)
     pieces = [] if rejected else write_pieces(unrolled, name, args)
+    mapping_bytes = write_mapping(
+        board_dir,
+        name,
+        groups,
+        geometries,
+        crops,
+        [observations[g[0]].shape for g in groups],
+        areas,
+        ordered,
+        px_per_unit,
+        unrolled.shape[:2],
+        pieces,
+        args.gap_px,
+        not args.no_stretch_faces,
+        args.margin_px,
+    )
 
     marker_pitch_units = float(np.median([g.pitch for g in geometries]))
     marker_side_mm = rail.pitch_mm / marker_pitch_units if rail is not None else None
@@ -165,6 +182,7 @@ def build_board(
         "unrolled": unrolled_path.name,
         "unrolled_shape": list(unrolled.shape[:2]),
         "pieces": pieces,
+        "mapping_bytes": mapping_bytes,
         "faces": [
             {**face, "area": area, "direction": str(log.rows.loc[log.rows["pass"] == p, "dir"].iloc[0])}
             for face, area, p in zip(faces, areas, pass_numbers)
