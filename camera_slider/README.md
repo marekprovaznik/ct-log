@@ -39,7 +39,8 @@ it sets the output resolution.
    `--no_distortion` turns it off. Soft-L1 loss, then observations above `--outlier_px` are dropped and the
    problem is re-solved. Frames without usable markers are placed by their wood tie points alone.
    Two soft terms join the same problem: the marker poses lie on one straight strip with a common pitch
-   (σ 0.02 marker sides, 0.01 rad), and in `camera_slider.dataset` each frame's position along the strip
+   (σ 0.02 marker sides, 0.01 rad; the strip is glued from sheets of 6 markers and every 6th step, e.g. 5→6,
+   is ~5 % shorter, so one joint offset per pass is fitted), and in `camera_slider.dataset` each frame's position along the strip
    follows the ESP `pos_mm` of its shot through the rail fit (σ = rail residual × (1 + |delay − median
    delay| / 150 ms); `--no_esp_prior` turns it off).
 5. **Board frame.** The strip axis becomes +x with marker IDs increasing along it, so faces from passes in

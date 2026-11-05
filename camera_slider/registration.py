@@ -19,7 +19,8 @@ K_BOUNDS = (0.5, 2.0)
 INIT_RANSAC_UNITS = 0.25
 INIT_SCALE_TOLERANCE = 0.2
 DIST_BOUNDS = (-0.5, 0.5)
-STRIP_PARAMS = 4
+STRIP_PARAMS = 5
+STRIP_SHEET_MARKERS = 6
 STRIP_SIGMA_UNITS = 0.02
 STRIP_SIGMA_RAD = 0.01
 
@@ -401,10 +402,14 @@ def _strip_turn(poses: np.ndarray, ids: np.ndarray) -> float:
 
 def _strip_line(poses: np.ndarray, ids: np.ndarray) -> np.ndarray:
     if len(ids) < 2 or np.ptp(ids) == 0:
-        return np.array([poses[0, 0], poses[0, 1], 0.0, 1.0])
+        return np.array([poses[0, 0], poses[0, 1], 0.0, 1.0, 0.0])
     bx, ax = np.polyfit(ids, poses[:, 0], 1)
     by, ay = np.polyfit(ids, poses[:, 1], 1)
-    return np.array([ax, ay, np.arctan2(by, bx), np.hypot(bx, by)])
+    return np.array([ax, ay, np.arctan2(by, bx), np.hypot(bx, by), 0.0])
+
+
+def _sheet_joints(ids: np.ndarray) -> np.ndarray:
+    return np.floor(ids / STRIP_SHEET_MARKERS)
 
 
 def _solve(
@@ -489,7 +494,8 @@ def _residuals(
 
 def _strip_residuals(problem: _Problem, p: np.ndarray, strip: np.ndarray) -> np.ndarray:
     u = np.array([np.cos(strip[2]), np.sin(strip[2])])
-    predicted = strip[:2] + problem.marker_ids[:, None] * strip[3] * u
+    along = problem.marker_ids * strip[3] + _sheet_joints(problem.marker_ids) * strip[4]
+    predicted = strip[:2] + along[:, None] * u
     xy = (p[:, :2] - predicted) / STRIP_SIGMA_UNITS
     theta = np.angle(np.exp(1j * (p[:, 2] - strip[2] - problem.strip_turn))) / STRIP_SIGMA_RAD
     return np.concatenate([xy.ravel(), theta])
@@ -532,13 +538,16 @@ def _strip_jacobian(
     u = np.array([np.cos(strip[2]), np.sin(strip[2])])
     u_perp = np.array([-u[1], u[0]])
     ids = problem.marker_ids
+    joints = _sheet_joints(ids)
+    along = ids * strip[3] + joints * strip[4]
     rows = np.arange(2 * n).reshape(n, 2)
     free_cols = n_frame_cols + MARKER_PARAMS * np.arange(n - 1)
     for axis in range(2):
         jac[rows[1:, axis], free_cols + axis] = 1.0 / STRIP_SIGMA_UNITS
         jac[rows[:, axis], strip_col + axis] = -1.0 / STRIP_SIGMA_UNITS
-        jac[rows[:, axis], strip_col + 2] = -ids * strip[3] * u_perp[axis] / STRIP_SIGMA_UNITS
+        jac[rows[:, axis], strip_col + 2] = -along * u_perp[axis] / STRIP_SIGMA_UNITS
         jac[rows[:, axis], strip_col + 3] = -ids * u[axis] / STRIP_SIGMA_UNITS
+        jac[rows[:, axis], strip_col + 4] = -joints * u[axis] / STRIP_SIGMA_UNITS
     theta_rows = 2 * n + np.arange(n)
     jac[theta_rows[1:], free_cols + 2] = 1.0 / STRIP_SIGMA_RAD
     jac[theta_rows, strip_col + 2] = -1.0 / STRIP_SIGMA_RAD

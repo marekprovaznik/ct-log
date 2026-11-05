@@ -25,7 +25,7 @@ def _problem(rng: np.random.Generator) -> _Problem:
         side_px=40.0,
         estimate_k=True,
         estimate_dist=True,
-        marker_ids=np.array([3.0, 4.0, 5.0]),
+        marker_ids=np.array([3.0, 6.0, 13.0]),
         strip_turn=np.pi / 2,
         prior_frame=np.array([0, 1]),
         prior_steps=np.array([3.4, 4.6]),
@@ -44,7 +44,7 @@ def test_jacobian_matches_finite_differences() -> None:
         [
             (np.eye(3) * 0.02 + rng.normal(0, 1e-4, (2, 3, 3))).reshape(2, 9)[:, :FRAME_PARAMS].ravel(),
             poses[1:].ravel(),
-            np.array([0.1, 0.05, 0.02, 1.1]),
+            np.array([0.1, 0.05, 0.02, 1.1, -0.05]),
             np.array([1.01]),
             np.array([0.01, -0.002]),
         ]
