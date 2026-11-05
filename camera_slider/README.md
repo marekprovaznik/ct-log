@@ -5,18 +5,28 @@ image at a common scale, and all faces stacked along the board length. Raw frame
 output can be rebuilt from them.
 
 ```bash
-python -m camera_slider.stitch --frames_dir <board_frames_dir> --out_dir <derived_root> [--marker_mm 20]
+python -m camera_slider.stitch --frames_dir <board_frames_dir> --out_dir <derived_root> [--marker_pitch_mm 47.6]
 ```
 
 `--n_faces` (default 4) is the number of passes expected; `--allow_partial` stitches whatever was found.
-`--marker_mm` adds an absolute px/mm to the report; `--px_per_mm` with it sets the output resolution.
+`--marker_pitch_mm` (distance between marker centres) adds an absolute px/mm to the report; `--px_per_mm` with
+it sets the output resolution.
 
 ## How it works
 
 1. **Passes.** Frames are sorted by EXIF capture time and split into passes where the gap exceeds
    `--pass_gap_s` (the slider waits ~5 s and the board turns between passes).
-2. **Markers.** ArUco `DICT_7X7_1000` markers on the strip are detected with sub-pixel corners. Pixel data
-   is read with EXIF orientation ignored.
+2. **Markers** ([markers.py](markers.py)). The strip carries `DICT_7X7_100` markers in ID order on a black
+   background, so a marker's black border merges with the strip and ArUco alone misses many of them and
+   places the merged edge too far in. Every ArUco candidate square (accepted or rejected) is decoded again
+   from cell medians; the decoded markers fix the strip line (axis, pitch, marker rotation) and every
+   candidate must sit at the position of its ID on that line (otherwise it gets the ID of its position if
+   its bits agree within 12 errors). Corners are then refined by ECC alignment of the known marker pattern
+   (inner 7×7 cells only, so the merged border does not bias them), and markers that were not found or are
+   cut by the frame edge are recovered at their predicted strip position the same way. A frame with one
+   decoded marker is seeded from its neighbours; a frame with none from the grey separator bars between
+   markers. `source` in the marker cache says how each marker was found (decoded, by strip order,
+   recovered). Pixel data is read with EXIF orientation ignored.
 3. **Wood tie points.** SIFT keypoints on the wood only (HSV mask) are matched between each frame and its
    next two neighbours, with a RANSAC similarity check.
 4. **Joint bundle adjustment** per pass ([registration.py](registration.py)): one homography per frame
@@ -28,10 +38,15 @@ python -m camera_slider.stitch --frames_dir <board_frames_dir> --out_dir <derive
    diagonal) is estimated in the same problem and applied to every observation before the homography;
    `--no_distortion` turns it off. Soft-L1 loss, then observations above `--outlier_px` are dropped and the
    problem is re-solved. Frames without usable markers are placed by their wood tie points alone.
+   Two soft terms join the same problem: the marker poses lie on one straight strip with a common pitch
+   (σ 0.02 marker sides, 0.01 rad), and in `camera_slider.dataset` each frame's position along the strip
+   follows the ESP `pos_mm` of its shot through the rail fit (σ = rail residual × (1 + |delay − median
+   delay| / 150 ms); `--no_esp_prior` turns it off).
 5. **Board frame.** The strip axis becomes +x with marker IDs increasing along it, so faces from passes in
-   opposite directions share the same board-end orientation; x = 0 is marker 0.
-6. **Render.** Frames are undistorted, warped at the median marker size (px per marker side, the same for
-   all faces of a board) and feather-blended.
+   opposite directions share the same board-end orientation; x = 0 is marker 0, and one unit is one marker
+   step (centre to centre), the most reliable length on the strip.
+6. **Render.** Frames are undistorted, warped at the median marker step in px (the same for all faces of a
+   board) and feather-blended.
 7. **Board mask** ([wood.py](wood.py), full resolution). Wood colour mask, closing, largest component,
    holes filled; then per column the longest wood run. Near the top and bottom edge the run is cut at a
    near-black gap when that brings the edge closer to the board's edge line (median over ~8000 px), which
@@ -85,8 +100,14 @@ python -m camera_slider.dataset \
 5. **Reject** a board (no pieces, status `rejected: ...` in `manifest.csv`) when its CSV match is not
    `ok`, a face has uncovered columns, a seam exceeds `--max_reject_seam_px`, or the face lengths of the board
    differ by more than `--max_face_length_diff_mm` (2 mm; a length mismatch is a stitching error, faces are
-   never stretched to hide it). `report.json` has `face_length_mm` and `face_length_diff_mm`. Exceptions give
-   `failed: ...`. `--skip_existing` resumes a run.
+   never stretched to hide it). `report.json` has `face_length_mm`, `face_length_diff_mm` and, as an
+   independent check, `face_length_esp_mm` (the marker length corrected by the ESP-minus-marker camera
+   position at both ends of the face, median of 3 frames per end). Exceptions give `failed: ...`.
+   `--skip_existing` resumes a run.
+
+A build can be split into shards that share one marker cache and one rail fit: run once with all boards
+and `--cache_dir <dir> --rails_json <file> --calibrate_only`, then each shard with `--boards ...` and the
+same two options.
 
 Outputs under `--out_root`:
 
@@ -94,7 +115,7 @@ Outputs under `--out_root`:
 |---|---|
 | `index.csv` | Every segment and CSV with its match and reason |
 | `board_ids.jpg` | Contact sheet of first frames with assigned board IDs |
-| `cache/` | Marker detections per session |
+| `cache/` | Marker detections per session (`markers_v2_*.pkl`, or `--cache_dir`) |
 | `boards/<label>_<board>/` | `face_<area>.jpg` + mask, `unrolled.jpg` (`.tif` above 65500 px), `preview.jpg`, `report.json` with the frame-to-shot table, `mapping.json` + `owner_<area>.png` (see [Stitch mapping](#stitch-mapping)); `render_<area>.jpg` with `--save_renders` |
 | `manifest.csv` | One row per board: status, seams, height k, px/mm, shots, pieces |
 | `supervisely/<project>/boards/` | `img/<label>_<board>_x<start>.jpg` pieces (`--pieces`, `--overlap_px`) with empty `ann/` |
