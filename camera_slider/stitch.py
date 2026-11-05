@@ -15,9 +15,9 @@ from PIL import Image
 from camera_slider.compose import FaceCrop, crop_board, layout_board, render_face
 from camera_slider.mapping import write_mapping
 from camera_slider.registration import (
-    PositionPrior,
     FrameObs,
     PassRegistration,
+    PositionPrior,
     detect_frame,
     find_gaps,
     make_detector,
