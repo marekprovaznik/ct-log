@@ -59,7 +59,7 @@ def segment_board(
     min_gap_px: int = 8,
     gap_v: int = 35,
     dark_ratio: float = 0.6,
-    reference_window: int = 8001,
+    reference_window: int = 2001,
     edge_tolerance: float = 20.0,
 ) -> np.ndarray:
     small = cv2.resize(image, None, fx=1 / scale, fy=1 / scale, interpolation=cv2.INTER_AREA) if scale > 1 else image

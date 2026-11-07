@@ -233,3 +233,12 @@ def test_segment_board_drops_side_sliver_and_edge_notch() -> None:
     assert mask[130, 315]
     assert mask[90, 400]
     assert not mask[30, 400]
+
+
+def test_segment_board_keeps_long_edge_drifting_near_the_end() -> None:
+    """A long edge drifting away near the board end stays on the real edge."""
+    image = np.zeros((400, 8000, 3), np.uint8)
+    corners = np.array([[20, 100], [7000, 100], [7980, 70], [7980, 300], [20, 300]], np.int32)
+    cv2.fillPoly(image, [corners], (60, 130, 200))
+    mask = segment_board(image)
+    assert abs(np.flatnonzero(mask[:, 7900])[0] - 72) <= 8
