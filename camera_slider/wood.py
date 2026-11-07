@@ -13,6 +13,7 @@ MAX_END_SLOPE = 0.14
 END_WINDOW_FRAC = 0.15
 END_ROW_MARGIN = 0.08
 END_MIN_ROW_FRAC = 0.5
+SEGMENT_V_MIN = 25
 
 
 @dataclasses.dataclass
@@ -62,7 +63,7 @@ def segment_board(
     edge_tolerance: float = 20.0,
 ) -> np.ndarray:
     small = cv2.resize(image, None, fx=1 / scale, fy=1 / scale, interpolation=cv2.INTER_AREA) if scale > 1 else image
-    wood = wood_mask(small, open_px=max(1, open_px // scale) | 1)
+    wood = wood_mask(small, v_min=SEGMENT_V_MIN, open_px=max(1, open_px // scale) | 1)
     kernel = np.ones((max(1, close_px[0] // scale), max(1, close_px[1] // scale)), np.uint8)
     mask = cv2.morphologyEx(wood, cv2.MORPH_CLOSE, kernel)
     n, labels, stats, _ = cv2.connectedComponentsWithStats(mask)
