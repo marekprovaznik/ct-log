@@ -23,6 +23,10 @@ STRIP_PARAMS = 5
 STRIP_SHEET_MARKERS = 6
 STRIP_SIGMA_UNITS = 0.02
 STRIP_SIGMA_RAD = 0.01
+RELIABLE_MARKERS = 3
+MARKER_AGREE_SIDES = 0.1
+TIE_MOTION_LIMIT_SIDES = 0.25
+FALSE_PAIR_SHARE = 0.5
 
 
 @dataclasses.dataclass
@@ -140,9 +144,12 @@ def register_pass(
     principal = np.array([w / 2, h / 2])
     radius = float(np.hypot(w, h) / 2)
     pairs = _subsample(pairs, max_ties_per_pair, seed)
+    disagreeing = _disagreeing_markers(observations, side_px)
+    anchored = _anchored_frames(observations, disagreeing)
+    pairs = _drop_false_ties(pairs, observations, disagreeing, side_px)
     poses, transforms = _initialise(observations, pairs, min_markers, side_px)
 
-    excluded_markers: Set[Tuple[int, int]] = set()
+    excluded_markers: Set[Tuple[int, int]] = set(disagreeing)
     excluded_ties = [np.zeros(len(p.pts_a), bool) for p in pairs]
     k, dist = 1.0, np.zeros(2)
     for _ in range(max_rounds):
@@ -164,7 +171,9 @@ def register_pass(
         distortion = Distortion(float(dist[0]), float(dist[1]), (float(principal[0]), float(principal[1])), radius)
         marker_err = _marker_errors(observations, poses, transforms, side_px, distortion)
         tie_err = _tie_errors(pairs, transforms, k, principal, side_px, distortion)
-        new_markers = {key for key, err in marker_err.items() if err > outlier_px} - excluded_markers
+        new_markers = {
+            key for key, err in marker_err.items() if err > outlier_px and key[0] not in anchored
+        } - excluded_markers
         new_ties = sum(int(((e > outlier_px) & ~x).sum()) for e, x in zip(tie_err, excluded_ties))
         excluded_markers |= new_markers
         excluded_ties = [x | (e > outlier_px) for e, x in zip(tie_err, excluded_ties)]
@@ -266,6 +275,78 @@ def marker_corners(poses: np.ndarray) -> np.ndarray:
     cos, sin = np.cos(poses[:, 2]), np.sin(poses[:, 2])
     rot = np.stack([np.stack([cos, -sin], -1), np.stack([sin, cos], -1)], -2)
     return np.einsum("mij,cj->mci", rot, TEMPLATE) + poses[:, None, :2]
+
+
+def _disagreeing_markers(observations: List[FrameObs], side_px: float) -> Set[Tuple[int, int]]:
+    """Markers off the straight ID-to-position line of their own frame, judged without any tie point."""
+    disagreeing: Set[Tuple[int, int]] = set()
+    for i, obs in enumerate(observations):
+        if len(obs.ids) < RELIABLE_MARKERS:
+            continue
+        ids = np.asarray(obs.ids, float)
+        centres = obs.corners.mean(1) / side_px
+        keep = np.ones(len(ids), bool)
+        while keep.sum() >= RELIABLE_MARKERS:
+            degree = 2 if keep.sum() >= 5 else 1
+            fitted = [np.polyval(np.polyfit(ids[keep], centres[keep, a], degree), ids) for a in range(2)]
+            errors = np.hypot(centres[:, 0] - fitted[0], centres[:, 1] - fitted[1])
+            worst = int(np.argmax(np.where(keep, errors, -1.0)))
+            if errors[worst] <= MARKER_AGREE_SIDES:
+                break
+            keep[worst] = False
+        disagreeing |= {(i, int(m)) for m, kept in zip(obs.ids, keep) if not kept}
+    return disagreeing
+
+
+def _anchored_frames(observations: List[FrameObs], disagreeing: Set[Tuple[int, int]]) -> Set[int]:
+    return {
+        i
+        for i, obs in enumerate(observations)
+        if sum((i, int(m)) not in disagreeing for m in obs.ids) >= RELIABLE_MARKERS
+    }
+
+
+def _drop_false_ties(
+    pairs: List[PairMatches],
+    observations: List[FrameObs],
+    disagreeing: Set[Tuple[int, int]],
+    side_px: float,
+) -> List[PairMatches]:
+    """Removes tie points that contradict the frame motion given by the markers both frames share."""
+    kept = []
+    n_points = n_pairs = 0
+    for pair in pairs:
+        centres_a, centres_b = (
+            {
+                int(m): c.mean(0)
+                for m, c in zip(observations[f].ids, observations[f].corners)
+                if (f, int(m)) not in disagreeing
+            }
+            for f in (pair.a, pair.b)
+        )
+        shared = sorted(set(centres_a) & set(centres_b))
+        if len(shared) < RELIABLE_MARKERS:
+            kept.append(pair)
+            continue
+        motion, _ = cv2.estimateAffinePartial2D(
+            np.array([centres_a[m] for m in shared], np.float32),
+            np.array([centres_b[m] for m in shared], np.float32),
+            method=cv2.LMEDS,
+        )
+        if motion is None:
+            kept.append(pair)
+            continue
+        errors = np.linalg.norm(pair.pts_a @ motion[:, :2].T + motion[:, 2] - pair.pts_b, axis=1)
+        good = errors <= TIE_MOTION_LIMIT_SIDES * side_px
+        if good.mean() < FALSE_PAIR_SHARE:
+            n_pairs += 1
+            n_points += len(good)
+            continue
+        n_points += int((~good).sum())
+        kept.append(dataclasses.replace(pair, pts_a=pair.pts_a[good], pts_b=pair.pts_b[good]))
+    if n_points:
+        LOGGER.info("Dropped %d tie points against the marker motion, %d whole pairs", n_points, n_pairs)
+    return kept
 
 
 def _initialise(

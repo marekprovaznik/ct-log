@@ -1,11 +1,53 @@
 from camera_slider.registration import (
     FRAME_PARAMS,
     STRIP_PARAMS,
+    FrameObs,
+    _anchored_frames,
+    _disagreeing_markers,
+    _drop_false_ties,
     _jacobian,
     _Problem,
     _residuals,
 )
+from camera_slider.wood import PairMatches
 import numpy as np
+
+SIDE = 100.0
+
+
+def _frame(name: str, ids: list, shift_x: float = 0.0, off: dict = None) -> FrameObs:
+    """Markers on a straight strip, one step per ID, with optional per-ID displacement in px."""
+    square = SIDE * np.array([[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]])
+    centres = [np.array([1.1 * SIDE * m + shift_x + (off or {}).get(m, 0.0), 500.0]) for m in ids]
+    return FrameObs(name, np.array(ids), np.stack([c + square for c in centres]), (1000, 1500))
+
+
+def test_disagreeing_marker_found_from_its_own_frame() -> None:
+    """A marker off the frame's ID line is excluded; the frame stays anchored by the others."""
+    frames = [_frame("a", [0, 1, 2, 3, 4, 5], off={3: 60.0}), _frame("b", [10, 11, 12, 13, 14])]
+    disagreeing = _disagreeing_markers(frames, SIDE)
+    assert disagreeing == {(0, 3)}
+    assert _anchored_frames(frames, disagreeing) == {0, 1}
+
+
+def test_frame_below_marker_threshold_is_not_anchored() -> None:
+    """Two markers are too few to anchor a frame and are not judged against each other."""
+    frames = [_frame("a", [0, 1])]
+    assert _disagreeing_markers(frames, SIDE) == set()
+    assert _anchored_frames(frames, set()) == set()
+
+
+def test_false_tie_pair_is_dropped_against_marker_motion() -> None:
+    """A pair that contradicts the shared markers goes; single bad points go from a good pair."""
+    a, b = _frame("a", [0, 1, 2, 3, 4]), _frame("b", [0, 1, 2, 3, 4], shift_x=-220.0)
+    points = np.column_stack([np.linspace(0, 800, 10), np.full(10, 100.0)])
+    good = points + np.array([-220.0, 0.0])
+    false_pair = PairMatches(0, 1, points, good + 2000.0)
+    mixed_b = good.copy()
+    mixed_b[0] += 2000.0
+    kept = _drop_false_ties([false_pair, PairMatches(0, 1, points, mixed_b)], [a, b], set(), SIDE)
+    assert len(kept) == 1
+    assert len(kept[0].pts_a) == 9
 
 
 def _problem(rng: np.random.Generator) -> _Problem:
