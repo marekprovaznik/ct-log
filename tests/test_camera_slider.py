@@ -242,3 +242,13 @@ def test_segment_board_keeps_long_edge_drifting_near_the_end() -> None:
     cv2.fillPoly(image, [corners], (60, 130, 200))
     mask = segment_board(image)
     assert abs(np.flatnonzero(mask[:, 7900])[0] - 72) <= 8
+
+
+def test_segment_board_follows_stepped_end() -> None:
+    """Each row of a stepped board end keeps its own end."""
+    image = np.zeros((400, 1000, 3), np.uint8)
+    image[100:200, 100:900] = (60, 130, 200)
+    image[200:300, 100:860] = (60, 130, 200)
+    mask = segment_board(image, edge_window=51, smooth_px=11, edge_margin=10, reference_window=101)
+    assert mask[150, 880]
+    assert not mask[250, 880]

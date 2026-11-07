@@ -1,6 +1,6 @@
 import dataclasses
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -14,6 +14,11 @@ END_WINDOW_FRAC = 0.15
 END_ROW_MARGIN = 0.08
 END_MIN_ROW_FRAC = 0.5
 SEGMENT_V_MIN = 25
+END_V_MIN = 10
+END_OPEN_PX = 9
+END_CLOSE_PX = 31
+END_WINDOW_MIN_PX = 200
+END_SMOOTH_ROWS = 31
 
 
 @dataclasses.dataclass
@@ -91,7 +96,12 @@ def segment_board(
     if edges is None:
         msg = "No timber found"
         raise ValueError(msg)
-    return _draw_band(image.shape[:2], *edges, _end_lines(wood, *edges), scale)
+    faint = cv2.morphologyEx(
+        wood_mask(small, s_min=0, v_min=END_V_MIN, open_px=max(1, END_OPEN_PX // scale) | 1),
+        cv2.MORPH_CLOSE,
+        np.ones((max(1, END_CLOSE_PX // scale), max(1, END_CLOSE_PX // scale)), np.uint8),
+    )
+    return _draw_band(image.shape[:2], *edges, _row_ends(faint, _end_lines(wood, *edges), *edges, scale), scale)
 
 
 def wood_features(image: np.ndarray, sift: cv2.SIFT, scale: float = 0.5) -> Tuple[np.ndarray, Optional[np.ndarray]]:
@@ -129,23 +139,55 @@ def _draw_band(
     columns: np.ndarray,
     top: np.ndarray,
     bottom: np.ndarray,
-    ends: Tuple[Tuple[float, float], Tuple[float, float]],
+    ends: Tuple[Tuple[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray]],
     scale: int,
 ) -> np.ndarray:
-    (a0, b0), (a1, b1) = ends
-    y_span = np.array([top.min(), bottom.max()])
+    (rows0, ends0), (rows1, ends1) = ends
     xs = (np.arange(shape[1]) + 0.5) / scale - 0.5
-    inside = (xs >= (a0 + b0 * y_span).min()) & (xs <= (a1 + b1 * y_span).max())
+    inside = (xs >= ends0.min()) & (xs <= ends1.max())
     rows = np.arange(shape[0])[:, None] + 0.5
-    y = rows / scale - 0.5
+    y = rows[:, 0] / scale - 0.5
+    left = np.interp(y, rows0, ends0)[:, None]
+    right = np.interp(y, rows1, ends1)[:, None]
     band = np.zeros(shape, bool)
     band[:, inside] = (
         (rows >= np.interp(xs[inside], columns, top) * scale)
         & (rows < np.interp(xs[inside], columns, bottom) * scale)
-        & (xs[inside] >= a0 + b0 * y)
-        & (xs[inside] <= a1 + b1 * y)
+        & (xs[inside] >= left)
+        & (xs[inside] <= right)
     )
     return band
+
+
+def _row_ends(
+    faint: np.ndarray,
+    lines: Tuple[Tuple[float, float], Tuple[float, float]],
+    columns: np.ndarray,
+    top: np.ndarray,
+    bottom: np.ndarray,
+    scale: int,
+) -> Tuple[Tuple[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray]]:
+    return (
+        _row_end(faint, lines[0], int(columns[0]), float(top[0]), float(bottom[0]), 0, scale),
+        _row_end(faint, lines[1], int(columns[-1]), float(top[-1]), float(bottom[-1]), 1, scale),
+    )
+
+
+def _row_end(
+    faint: np.ndarray, line: Tuple[float, float], column: int, top: float, bottom: float, side: int, scale: int
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Follows one board end row by row through the faint wood; rows without a clear end keep the fitted line."""
+    half = max(END_WINDOW_MIN_PX // scale, int(END_WINDOW_FRAC * (bottom - top)))
+    lo, hi = max(0, column - half), min(faint.shape[1], column + half + 1)
+    rows = np.arange(max(0, int(top)), min(faint.shape[0], int(np.ceil(bottom)) + 1))
+    ends = line[0] + line[1] * rows.astype(float)
+    for k, row in enumerate(rows):
+        start, end = _longest_run(faint[row, lo:hi])
+        anchored = end == hi - lo if side == 0 else start == 0
+        position = lo + (start if side == 0 else end)
+        if end > start and anchored and lo < position < hi:
+            ends[k] = position - 0.5
+    return rows.astype(float), median_filter(ends, size=max(1, END_SMOOTH_ROWS // scale) | 1, mode="nearest")
 
 
 def _end_lines(
@@ -199,15 +241,15 @@ def _column_edges(
         return None
     valid = np.flatnonzero(lengths >= params.min_run_frac * np.median(lengths[lengths > 0]))
     full = runs[valid]
-    trimmed = np.array(
-        [_trim_run(tuple(full[i]), value[:, x], params) for i, x in enumerate(valid)]
-    )
+    trimmed = np.array([_trim_run(tuple(full[i]), value[:, x], params) for i, x in enumerate(valid)])
     reference = median_filter(trimmed, size=(params.reference_window, 1), mode="reflect")
     chosen = np.where(np.abs(trimmed - reference) <= np.abs(full - reference), trimmed, full)
     top, bottom = (
         uniform_filter1d(
             median_filter(
-                _drop_outliers(valid, chosen[:, k], reference[:, k], params.tolerance), size=params.window, mode="reflect"
+                _drop_outliers(valid, chosen[:, k], reference[:, k], params.tolerance),
+                size=params.window,
+                mode="reflect",
             ),
             params.smooth,
             mode="reflect",
