@@ -10,6 +10,7 @@ from camera_slider.wood import segment_board
 
 NO_OWNER = 255
 END_REACH_FRAC = 0.15
+MID_BAND_FRAC = 0.2
 
 
 @dataclasses.dataclass
@@ -125,7 +126,7 @@ def crop_board(render: FaceRender) -> FaceCrop:
     mask = board[y0:y1, x0:x1]
     image = render.image[y0:y1, x0:x1] * mask[..., None]
     height = y1 - y0
-    mid_span = _row_span(mask, height // 2)
+    mid_span = _mid_span(mask)
     edge_spans = _edge_spans(mask, mid_span)
     x_range = (
         render.origin[0] + (x0 + mid_span[0]) / render.px_per_unit,
@@ -167,9 +168,17 @@ def layout_placements(
     return placements
 
 
-def _row_span(mask: np.ndarray, row: int) -> Tuple[int, int]:
-    xs = np.flatnonzero(mask[row])
-    return (int(xs[0]), int(xs[-1]) + 1) if len(xs) else (0, mask.shape[1])
+def _mid_span(mask: np.ndarray) -> Tuple[int, int]:
+    """Median start and end of the rows in the middle band of the face, so one notch does not move the length."""
+    height = mask.shape[0]
+    half = max(1, int(MID_BAND_FRAC * height / 2))
+    rows = mask[max(0, height // 2 - half) : height // 2 + half + 1]
+    filled = rows.any(1)
+    if not filled.any():
+        return 0, mask.shape[1]
+    starts = rows[filled].argmax(1)
+    ends = mask.shape[1] - rows[filled][:, ::-1].argmax(1)
+    return int(round(np.median(starts))), int(round(np.median(ends)))
 
 
 def _edge_spans(mask: np.ndarray, mid_span: Tuple[int, int]) -> Tuple[Tuple[int, int], Tuple[int, int]]:
