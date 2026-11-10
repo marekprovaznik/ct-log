@@ -99,9 +99,10 @@ python -m camera_slider.dataset \
 4. **Stitch** each pass as above; faces and directions come from the CSV, layout `ABCD` for 4 faces (the
    order in which adjacent faces share an edge, checked with knots crossing the edges) and `AB` for 2.
 5. **Reject** a board (no pieces, status `rejected: ...` in `manifest.csv`) when its CSV match is not
-   `ok`, a face has uncovered columns, or a seam exceeds `--max_reject_seam_px`. Faces are never stretched and
-   a face length difference never rejects a board: a difference above `--flag_face_length_diff_mm` (2 mm) is
-   listed in `flags` of `report.json` and `manifest.csv`. `report.json` has `face_length_mm` (at mid-width), `face_length_edges_mm` (near both long edges), `face_length_diff_mm` and, as an
+   `ok` or a face has uncovered columns. Faces are never stretched, and neither a face length difference nor a
+   seam rejects a board: a difference above `--flag_face_length_diff_mm` (2 mm) and a seam above `--flag_seam_px`
+   (5 px) are listed in `flags` of `report.json` and `manifest.csv`. `report.json` has `face_length_mm` (median
+   over the middle 20 % of the face width), `face_length_edges_mm` (near both long edges), `face_length_diff_mm` and, as an
    independent check, `face_length_esp_mm` (the marker length corrected by the ESP-minus-marker camera
    position at both ends of the face, median of 3 frames per end). Exceptions give `failed: ...`.
    `--skip_existing` resumes a run.

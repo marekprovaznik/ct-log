@@ -47,7 +47,7 @@ def main() -> None:
     parser.add_argument("--min_markers", type=int, default=2)
     parser.add_argument("--outlier_px", type=float, default=8.0)
     parser.add_argument("--max_seam_px", type=float, default=3.0)
-    parser.add_argument("--max_reject_seam_px", type=float, default=5.0)
+    parser.add_argument("--flag_seam_px", type=float, default=5.0, help="flag a face whose largest seam exceeds this")
     parser.add_argument("--no_height_correction", action="store_true")
     parser.add_argument("--no_distortion", action="store_true", help="do not estimate radial lens distortion")
     parser.add_argument("--no_esp_prior", action="store_true", help="do not use the ESP shot positions in registration")
@@ -190,8 +190,8 @@ def build_board(
         if esp_steps
         else None
     )
-    rejected = reject_reasons(faces, len(crops), log.passes, args.max_reject_seam_px)
-    flags = length_reasons(face_length_mm, args.flag_face_length_diff_mm)
+    rejected = reject_reasons(faces, len(crops), log.passes)
+    flags = length_reasons(face_length_mm, args.flag_face_length_diff_mm) + seam_reasons(faces, args.flag_seam_px)
     pieces = [] if rejected else write_pieces(unrolled, name, args)
     mapping_bytes = write_mapping(
         board_dir,
@@ -246,16 +246,24 @@ def build_board(
     return _manifest_row(report, faces, shots, segment.n_frames, log.shots)
 
 
-def reject_reasons(faces: List[Dict], n_faces: int, n_passes: int, max_seam_px: float) -> List[str]:
+def reject_reasons(faces: List[Dict], n_faces: int, n_passes: int) -> List[str]:
     reasons = []
     if n_faces != n_passes:
         reasons.append(f"{n_faces} of {n_passes} faces")
     for face in faces:
         if face["uncovered_columns"] > 0:
             reasons.append(f"face {face['face']}: {face['uncovered_columns']} uncovered columns")
-        if face["seam_max_px"] is None or face["seam_max_px"] > max_seam_px:
-            reasons.append(f"face {face['face']}: seam {face['seam_max_px']} px")
+        if face["seam_max_px"] is None:
+            reasons.append(f"face {face['face']}: no seam measured")
     return reasons
+
+
+def seam_reasons(faces: List[Dict], max_seam_px: float) -> List[str]:
+    return [
+        f"face {face['face']}: seam {face['seam_max_px']:.2f} px"
+        for face in faces
+        if face["seam_max_px"] is not None and face["seam_max_px"] > max_seam_px
+    ]
 
 
 def esp_face_length(
