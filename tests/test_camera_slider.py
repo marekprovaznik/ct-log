@@ -252,3 +252,14 @@ def test_segment_board_follows_stepped_end() -> None:
     mask = segment_board(image, edge_window=51, smooth_px=11, edge_margin=10, reference_window=101)
     assert mask[150, 880]
     assert not mask[250, 880]
+
+
+def test_segment_board_includes_dark_band_but_stops_at_black_gap() -> None:
+    """A dark band touching the board is kept; wood beyond a black gap is not."""
+    image = np.zeros((500, 1000, 3), np.uint8)
+    image[150:350, 50:950] = (60, 130, 200)
+    image[120:150, 50:950] = (5, 8, 18)
+    image[380:420, 50:950] = (5, 8, 18)
+    mask = segment_board(image, edge_window=51, smooth_px=11, edge_margin=10, reference_window=101)
+    assert mask[135, 500]
+    assert not mask[400, 500]

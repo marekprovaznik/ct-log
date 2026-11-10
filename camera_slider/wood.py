@@ -14,11 +14,16 @@ END_WINDOW_FRAC = 0.15
 END_ROW_MARGIN = 0.08
 END_MIN_ROW_FRAC = 0.5
 SEGMENT_V_MIN = 25
+EDGE_V_MIN = 10
+EDGE_OPEN_PX = 5
+EDGE_CLOSE_PX = 1
+EDGE_EXTEND_PX = 200
 END_V_MIN = 10
 END_OPEN_PX = 9
 END_CLOSE_PX = 31
 END_WINDOW_MIN_PX = 200
 END_SMOOTH_ROWS = 31
+END_MAX_OUT_PX = 150
 
 
 @dataclasses.dataclass
@@ -32,6 +37,7 @@ class EdgeParams:
     tolerance: float
     gap_v: int
     dark_ratio: float
+    extend: int
 
 
 @dataclasses.dataclass
@@ -78,9 +84,15 @@ def segment_board(
     board = (labels == 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])).astype(np.uint8)
     del labels
     value = cv2.cvtColor(small, cv2.COLOR_BGR2HSV)[..., 2]
+    dark = cv2.morphologyEx(
+        wood_mask(small, v_min=EDGE_V_MIN, open_px=max(1, EDGE_OPEN_PX // scale) | 1),
+        cv2.MORPH_CLOSE,
+        np.ones((max(1, EDGE_CLOSE_PX // scale), max(1, EDGE_CLOSE_PX // scale)), np.uint8),
+    ).astype(bool)
     edges = _column_edges(
         _fill_holes(board).astype(bool),
         value,
+        dark,
         EdgeParams(
             window=edge_window // scale | 1,
             smooth=smooth_px // scale | 1,
@@ -91,13 +103,14 @@ def segment_board(
             tolerance=edge_tolerance / scale,
             gap_v=gap_v,
             dark_ratio=dark_ratio,
+            extend=EDGE_EXTEND_PX // scale,
         ),
     )
     if edges is None:
         msg = "No timber found"
         raise ValueError(msg)
     faint = cv2.morphologyEx(
-        wood_mask(small, s_min=0, v_min=END_V_MIN, open_px=max(1, END_OPEN_PX // scale) | 1),
+        wood_mask(small, v_min=END_V_MIN, open_px=max(1, END_OPEN_PX // scale) | 1),
         cv2.MORPH_CLOSE,
         np.ones((max(1, END_CLOSE_PX // scale), max(1, END_CLOSE_PX // scale)), np.uint8),
     )
@@ -186,7 +199,8 @@ def _row_end(
         anchored = end == hi - lo if side == 0 else start == 0
         position = lo + (start if side == 0 else end)
         if end > start and anchored and lo < position < hi:
-            ends[k] = position - 0.5
+            limit = END_MAX_OUT_PX // scale
+            ends[k] = max(position - 0.5, ends[k] - limit) if side == 0 else min(position - 0.5, ends[k] + limit)
     return rows.astype(float), median_filter(ends, size=max(1, END_SMOOTH_ROWS // scale) | 1, mode="nearest")
 
 
@@ -233,7 +247,7 @@ def _robust_line(rows: np.ndarray, ends: np.ndarray) -> Tuple[float, float, int]
 
 
 def _column_edges(
-    mask: np.ndarray, value: np.ndarray, params: EdgeParams
+    mask: np.ndarray, value: np.ndarray, dark: np.ndarray, params: EdgeParams
 ) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
     runs = np.array([_longest_run(column) for column in mask.T])
     lengths = runs[:, 1] - runs[:, 0]
@@ -244,6 +258,8 @@ def _column_edges(
     trimmed = np.array([_trim_run(tuple(full[i]), value[:, x], params) for i, x in enumerate(valid)])
     reference = median_filter(trimmed, size=(params.reference_window, 1), mode="reflect")
     chosen = np.where(np.abs(trimmed - reference) <= np.abs(full - reference), trimmed, full)
+    chosen = np.array([_extend_run(tuple(chosen[i]), dark[:, x], params.extend) for i, x in enumerate(valid)])
+    reference = median_filter(chosen, size=(params.reference_window, 1), mode="reflect")
     top, bottom = (
         uniform_filter1d(
             median_filter(
@@ -264,6 +280,16 @@ def _drop_outliers(columns: np.ndarray, edge: np.ndarray, reference: np.ndarray,
     if not keep.any():
         return edge
     return np.interp(columns, columns[keep], edge[keep])
+
+
+def _extend_run(run: Tuple[int, int], dark: np.ndarray, limit: int) -> Tuple[int, int]:
+    """Moves both ends of a column run outward through continuous wood, up to the limit."""
+    start, end = run
+    above = dark[max(0, start - limit) : start][::-1]
+    below = dark[end : end + limit]
+    up = int(np.argmin(above)) if len(above) and not above.all() else len(above)
+    down = int(np.argmin(below)) if len(below) and not below.all() else len(below)
+    return start - up, end + down
 
 
 def _trim_run(run: Tuple[int, int], value: np.ndarray, params: EdgeParams) -> Tuple[int, int]:
