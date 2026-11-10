@@ -72,6 +72,7 @@ def _problem(rng: np.random.Generator) -> _Problem:
         prior_frame=np.array([0, 1]),
         prior_steps=np.array([3.4, 4.6]),
         prior_sigma=np.array([0.1, 0.3]),
+        obs_scale=np.array([2.0, 2.0, 1.0, 1.0]).repeat(8),
     )
 
 

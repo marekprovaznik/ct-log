@@ -24,6 +24,7 @@ STRIP_SHEET_MARKERS = 6
 STRIP_SIGMA_UNITS = 0.02
 STRIP_SIGMA_RAD = 0.01
 RELIABLE_MARKERS = 3
+MARKER_WEIGHT = 2.0
 MARKER_AGREE_SIDES = 0.1
 TIE_MOTION_LIMIT_SIDES = 0.25
 FALSE_PAIR_SHARE = 0.5
@@ -109,6 +110,7 @@ class _Problem:
     prior_frame: np.ndarray
     prior_steps: np.ndarray
     prior_sigma: np.ndarray
+    obs_scale: np.ndarray
 
 
 def make_detector() -> cv2.aruco.ArucoDetector:
@@ -439,6 +441,7 @@ def _build_problem(
         for m, c in zip(observations[f].ids, observations[f].corners)
         if m in poses and (f, int(m)) not in excluded_markers
     ]
+    anchored = _anchored_frames(observations, _disagreeing_markers(observations, side_px))
     markers = sorted({m for _, m, _ in obs})
     if not markers:
         msg = "No marker observation left to fix the board scale; check marker detection"
@@ -472,6 +475,7 @@ def _build_problem(
         prior_frame=np.array([frame_index[f] for f in with_prior], int),
         prior_steps=np.array([prior.steps[f] for f in with_prior]) if with_prior else np.zeros(0),
         prior_sigma=np.array([prior.sigma[f] for f in with_prior]) if with_prior else np.zeros(0),
+        obs_scale=np.array([MARKER_WEIGHT if frames[j] in anchored else 1.0 for j, _, _ in obs]).repeat(8),
     )
 
 
@@ -570,6 +574,7 @@ def _residuals(
     ta, _, _ = _project(h[problem.tie_a], _shrink(_undistort(problem.tie_ua, d, c, r), k, c))
     tb, _, _ = _project(h[problem.tie_b], _shrink(_undistort(problem.tie_ub, d, c, r), k, c))
     image = problem.side_px * np.concatenate([(obs_canon - corners).ravel(), (ta - tb).ravel()])
+    image[: len(problem.obs_scale)] *= problem.obs_scale
     return np.concatenate([image, _strip_residuals(problem, p, strip), _prior_residuals(problem, h, strip)])
 
 
@@ -602,9 +607,11 @@ def _jacobian(
     strip_col: int,
     n_cols: int,
 ) -> np.ndarray:
+    image = _image_jacobian(problem, h, p, k, d, n_frame_cols, n_cols)
+    image[: len(problem.obs_scale)] *= problem.obs_scale[:, None]
     return np.concatenate(
         [
-            _image_jacobian(problem, h, p, k, d, n_frame_cols, n_cols),
+            image,
             _strip_jacobian(problem, strip, n_frame_cols, strip_col, n_cols),
             _prior_jacobian(problem, h, strip, strip_col, n_cols),
         ]
