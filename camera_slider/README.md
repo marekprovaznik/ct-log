@@ -36,8 +36,15 @@ it sets the output resolution.
    different height than the strip (`k` = strip distance / wood distance). Radial lens distortion
    (`k1`, `k2`, shared by all frames of the pass, about the image centre, radius normalised by the half
    diagonal) is estimated in the same problem and applied to every observation before the homography;
-   `--no_distortion` turns it off. Soft-L1 loss, then observations above `--outlier_px` are dropped and the
-   problem is re-solved. Frames without usable markers are placed by their wood tie points alone.
+   `--no_distortion` turns it off. Before the solve, each frame's markers are checked against the
+   ID-to-position line of that frame alone (quadratic from 5 markers); a marker more than 0.1 marker side
+   off it is left out. A frame with at least 3 agreeing markers is anchored: markers place it, its marker
+   residuals weigh twice the tie points, and it is exempt from the tie outlier limit. Tie points that
+   contradict the motion of the markers two frames share (more than 0.25 marker side) are dropped, and a
+   whole pair goes when fewer than half of its points pass. Soft-L1 loss, then observations of frames
+   that are not anchored above `--outlier_px` are dropped and the problem is re-solved. Frames with 1–2
+   markers combine them with tie points and the ESP prior; frames without markers are placed by tie
+   points and the ESP prior.
    Two soft terms join the same problem: the marker poses lie on one straight strip with a common pitch
    (σ 0.02 marker sides, 0.01 rad; the strip is glued from sheets of 6 markers and every 6th step, e.g. 5→6,
    is ~5 % shorter, so one joint offset per pass is fitted), and in `camera_slider.dataset` each frame's position along the strip
@@ -48,11 +55,16 @@ it sets the output resolution.
    step (centre to centre), the most reliable length on the strip.
 6. **Render.** Frames are undistorted, warped at the median marker step in px (the same for all faces of a
    board) and feather-blended.
-7. **Board mask** ([wood.py](wood.py), full resolution). Wood colour mask, closing, largest component,
-   holes filled; then per column the longest wood run. Near the top and bottom edge the run is cut at a
-   near-black gap when that brings the edge closer to the board's edge line (median over ~8000 px), which
-   drops the side face seen at an angle while keeping dark wood at the edge. Edge points further than 20 px
-   from that line are interpolated from their neighbours, and both edges are smoothed.
+7. **Board mask** ([wood.py](wood.py), full resolution). Wood colour mask (saturation > 60, value > 25),
+   closing, largest component, holes filled; then per column the longest wood run. Near the top and
+   bottom edge the run is cut at a near-black gap when that brings the edge closer to the board's edge
+   line (median over ~2000 px). Each edge then extends outward through continuous saturated wood down to
+   value 10, up to 200 px, and stops at the first black gap, so a dark band of the face stays in and the
+   strip and background stay out. Edge points further than 20 px from the edge line are interpolated
+   from their neighbours, and both edges are smoothed. Each board end follows the wood row by row
+   (same colour rule, median over 31 rows), at most 150 px beyond a straight line fitted to the end;
+   rows without a clear end keep that line. `face_length_mm` is the median length over the middle 20 %
+   of the face width.
 8. **Layout.** Faces keep their measured length (never resized), are centred and stacked with `--gap_px`
    between faces and `--margin_px` around the board.
 
@@ -253,6 +265,7 @@ coordinates of every annotated pixel per board.
 - Lens distortion is radial only (no tangential terms or decentring). On spruce_050 (50 mm lens) the four
   passes give k1 between -0.0014 and -0.0007, under 3 px at the frame corners, and the seams are unchanged.
 - Rendering a ~35k px long face at native resolution peaks at ~7 GB RAM.
-- The strip's black number band touches the marker borders, so only part of the visible markers are
-  detected; wood tie points carry the frames in between. On larch most marker observations are dropped as
-  outliers (182 of 263 on larch_020 face A, spruce 30–80 per face) while the seams stay under 1.5 px.
+- Frames with fewer than 3 agreeing markers (437 of 12,388 frames have fewer than 2) rest on wood tie
+  points and the ESP prior.
+- The mask can include a dark object or strip paper touching a board end (up to 150 px), and a chalk
+  mark at an end leaves a small notch.
