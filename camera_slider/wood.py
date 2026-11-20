@@ -18,6 +18,7 @@ EDGE_V_MIN = 10
 EDGE_OPEN_PX = 5
 EDGE_CLOSE_PX = 1
 EDGE_EXTEND_PX = 200
+EDGE_BRIGHT_RUN_PX = 10
 END_V_MIN = 10
 END_OPEN_PX = 9
 END_CLOSE_PX = 31
@@ -93,6 +94,7 @@ def segment_board(
         _fill_holes(board).astype(bool),
         value,
         dark,
+        wood.astype(bool),
         EdgeParams(
             window=edge_window // scale | 1,
             smooth=smooth_px // scale | 1,
@@ -247,7 +249,7 @@ def _robust_line(rows: np.ndarray, ends: np.ndarray) -> Tuple[float, float, int]
 
 
 def _column_edges(
-    mask: np.ndarray, value: np.ndarray, dark: np.ndarray, params: EdgeParams
+    mask: np.ndarray, value: np.ndarray, dark: np.ndarray, bright: np.ndarray, params: EdgeParams
 ) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
     runs = np.array([_longest_run(column) for column in mask.T])
     lengths = runs[:, 1] - runs[:, 0]
@@ -258,7 +260,7 @@ def _column_edges(
     trimmed = np.array([_trim_run(tuple(full[i]), value[:, x], params) for i, x in enumerate(valid)])
     reference = median_filter(trimmed, size=(params.reference_window, 1), mode="reflect")
     chosen = np.where(np.abs(trimmed - reference) <= np.abs(full - reference), trimmed, full)
-    chosen = np.array([_extend_run(tuple(chosen[i]), dark[:, x], params.extend) for i, x in enumerate(valid)])
+    chosen = np.array([_extend_run(tuple(chosen[i]), dark[:, x], bright[:, x], params.extend) for i, x in enumerate(valid)])
     reference = median_filter(chosen, size=(params.reference_window, 1), mode="reflect")
     top, bottom = (
         uniform_filter1d(
@@ -282,14 +284,28 @@ def _drop_outliers(columns: np.ndarray, edge: np.ndarray, reference: np.ndarray,
     return np.interp(columns, columns[keep], edge[keep])
 
 
-def _extend_run(run: Tuple[int, int], dark: np.ndarray, limit: int) -> Tuple[int, int]:
-    """Moves both ends of a column run outward through continuous wood, up to the limit."""
+def _extend_run(run: Tuple[int, int], dark: np.ndarray, bright: np.ndarray, limit: int) -> Tuple[int, int]:
+    """Moves both ends of a column run outward through a dark band that ends at a black gap within the limit.
+
+    A stretch that runs into the limit, or that reaches bright wood again after its dark part (a strip lath or a
+    neighbouring face behind a dark crack), is not taken.
+    """
     start, end = run
-    above = dark[max(0, start - limit) : start][::-1]
-    below = dark[end : end + limit]
-    up = int(np.argmin(above)) if len(above) and not above.all() else len(above)
-    down = int(np.argmin(below)) if len(below) and not below.all() else len(below)
+    up = _dark_band(dark[max(0, start - limit) : start][::-1], bright[max(0, start - limit) : start][::-1])
+    down = _dark_band(dark[end : end + limit], bright[end : end + limit])
     return start - up, end + down
+
+
+def _dark_band(dark: np.ndarray, bright: np.ndarray) -> int:
+    if len(dark) == 0 or dark.all():
+        return 0
+    length = int(np.argmin(dark))
+    band = bright[:length]
+    first_dark = int(np.argmin(band)) if length and not band.all() else length
+    beyond = band[first_dark:]
+    if len(beyond) and _longest_run(beyond)[1] - _longest_run(beyond)[0] >= EDGE_BRIGHT_RUN_PX:
+        return 0
+    return length
 
 
 def _trim_run(run: Tuple[int, int], value: np.ndarray, params: EdgeParams) -> Tuple[int, int]:
