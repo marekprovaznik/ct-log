@@ -59,8 +59,9 @@ it sets the output resolution.
    closing, largest component, holes filled; then per column the longest wood run. Near the top and
    bottom edge the run is cut at a near-black gap when that brings the edge closer to the board's edge
    line (median over ~2000 px). Each edge then extends outward through continuous saturated wood down to
-   value 10, up to 200 px, and stops at the first black gap, so a dark band of the face stays in and the
-   strip and background stay out. Edge points further than 20 px from the edge line are interpolated
+   value 10, up to 200 px, when that stretch ends at a black gap and has no bright wood beyond its dark
+   part, so a dark band of the face stays in while the strip, a strip lath behind a dark crack and the
+   background stay out. Edge points further than 20 px from the edge line are interpolated
    from their neighbours, and both edges are smoothed. Each board end follows the wood row by row
    (same colour rule, median over 31 rows), at most 150 px beyond a straight line fitted to the end;
    rows without a clear end keep that line. `face_length_mm` is the median length over the middle 20 %
