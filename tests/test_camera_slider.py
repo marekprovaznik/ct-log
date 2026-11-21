@@ -274,3 +274,14 @@ def test_segment_board_does_not_take_bright_wood_behind_a_dark_crack() -> None:
     mask = segment_board(image, edge_window=51, smooth_px=11, edge_margin=10, reference_window=101)
     assert mask[300, 500]
     assert not mask[150, 500]
+
+
+def test_segment_board_does_not_take_a_lath_behind_a_moderately_dark_crack() -> None:
+    """A lath behind a crack that is only darker than the face, not black, stays outside the mask."""
+    image = np.zeros((500, 1000, 3), np.uint8)
+    image[200:400, 50:950] = (60, 130, 200)
+    image[180:200, 50:950] = (25, 50, 80)
+    image[120:180, 50:950] = (60, 130, 200)
+    mask = segment_board(image, edge_window=51, smooth_px=11, reference_window=101)
+    assert mask[300, 500]
+    assert not mask[150, 500]

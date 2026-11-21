@@ -94,7 +94,6 @@ def segment_board(
         _fill_holes(board).astype(bool),
         value,
         dark,
-        wood.astype(bool),
         EdgeParams(
             window=edge_window // scale | 1,
             smooth=smooth_px // scale | 1,
@@ -249,7 +248,7 @@ def _robust_line(rows: np.ndarray, ends: np.ndarray) -> Tuple[float, float, int]
 
 
 def _column_edges(
-    mask: np.ndarray, value: np.ndarray, dark: np.ndarray, bright: np.ndarray, params: EdgeParams
+    mask: np.ndarray, value: np.ndarray, dark: np.ndarray, params: EdgeParams
 ) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
     runs = np.array([_longest_run(column) for column in mask.T])
     lengths = runs[:, 1] - runs[:, 0]
@@ -260,7 +259,12 @@ def _column_edges(
     trimmed = np.array([_trim_run(tuple(full[i]), value[:, x], params) for i, x in enumerate(valid)])
     reference = median_filter(trimmed, size=(params.reference_window, 1), mode="reflect")
     chosen = np.where(np.abs(trimmed - reference) <= np.abs(full - reference), trimmed, full)
-    chosen = np.array([_extend_run(tuple(chosen[i]), dark[:, x], bright[:, x], params.extend) for i, x in enumerate(valid)])
+    chosen = np.array(
+        [
+            _extend_run(tuple(chosen[i]), dark[:, x], _bright(value[:, x], tuple(chosen[i]), params), params.extend)
+            for i, x in enumerate(valid)
+        ]
+    )
     reference = median_filter(chosen, size=(params.reference_window, 1), mode="reflect")
     top, bottom = (
         uniform_filter1d(
@@ -294,6 +298,12 @@ def _extend_run(run: Tuple[int, int], dark: np.ndarray, bright: np.ndarray, limi
     up = _dark_band(dark[max(0, start - limit) : start][::-1], bright[max(0, start - limit) : start][::-1])
     down = _dark_band(dark[end : end + limit], bright[end : end + limit])
     return start - up, end + down
+
+
+def _bright(value: np.ndarray, run: Tuple[int, int], params: EdgeParams) -> np.ndarray:
+    """Pixels as bright as the face itself, by the same threshold the gap trim uses."""
+    start, end = run
+    return value >= max(params.gap_v, params.dark_ratio * float(np.median(value[start:end])))
 
 
 def _dark_band(dark: np.ndarray, bright: np.ndarray) -> int:
