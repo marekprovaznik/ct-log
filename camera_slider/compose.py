@@ -1,4 +1,5 @@
 import dataclasses
+import math
 from typing import Callable, Dict, List, Optional, Tuple
 
 import cv2
@@ -8,6 +9,8 @@ from camera_slider.registration import Distortion, undistort_maps, undistort_poi
 from camera_slider.wood import segment_board
 
 NO_OWNER = 255
+END_REACH_FRAC = 0.15
+MID_BAND_FRAC = 0.2
 
 
 @dataclasses.dataclass
@@ -28,6 +31,18 @@ class FaceCrop:
     uncovered_columns: int
     owner: np.ndarray
     origin: Tuple[float, float]
+    mid_span: Optional[Tuple[int, int]] = None
+    edge_spans: Optional[Tuple[Tuple[int, int], Tuple[int, int]]] = None
+
+    @property
+    def length_px(self) -> int:
+        start, end = self.mid_span or (0, self.image.shape[1])
+        return end - start
+
+    @property
+    def centre_px(self) -> float:
+        start, end = self.mid_span or (0, self.image.shape[1])
+        return (start + end) / 2
 
 
 @dataclasses.dataclass
@@ -110,40 +125,75 @@ def crop_board(render: FaceRender) -> FaceCrop:
     uncovered = int((~band.all(0)).sum())
     mask = board[y0:y1, x0:x1]
     image = render.image[y0:y1, x0:x1] * mask[..., None]
-    x_range = (render.origin[0] + x0 / render.px_per_unit, render.origin[0] + x1 / render.px_per_unit)
-    return FaceCrop(image, mask, (x0, y0, x1, y1), x_range, uncovered, render.owner[y0:y1, x0:x1], render.origin)
+    height = y1 - y0
+    mid_span = _mid_span(mask)
+    edge_spans = _edge_spans(mask, mid_span)
+    x_range = (
+        render.origin[0] + (x0 + mid_span[0]) / render.px_per_unit,
+        render.origin[0] + (x0 + mid_span[1]) / render.px_per_unit,
+    )
+    return FaceCrop(
+        image,
+        mask,
+        (x0, y0, x1, y1),
+        x_range,
+        uncovered,
+        render.owner[y0:y1, x0:x1],
+        render.origin,
+        mid_span,
+        edge_spans,
+    )
 
 
-def layout_board(
-    crops: List[FaceCrop], gap: int = 40, stretch: bool = True, margin: int = 40
-) -> Tuple[np.ndarray, List[float]]:
-    placements = layout_placements([c.image.shape[:2] for c in crops], gap, stretch, margin)
-    width = max(p.width for p in placements) + 2 * margin
+def layout_board(crops: List[FaceCrop], gap: int = 40, margin: int = 40) -> np.ndarray:
+    placements = layout_placements([c.image.shape[:2] for c in crops], gap, margin, [c.centre_px for c in crops])
+    width = max(p.x + p.width for p in placements) + margin
     height = sum(p.height for p in placements) + gap * (len(placements) - 1) + 2 * margin
     board = np.zeros((height, width, 3), np.uint8)
     for crop, p in zip(crops, placements):
-        image = (
-            cv2.resize(crop.image, (p.width, p.height), interpolation=cv2.INTER_LINEAR)
-            if p.width != crop.image.shape[1]
-            else crop.image
-        )
-        board[p.y : p.y + p.height, p.x : p.x + p.width] = image
-    return board, [p.scale_x for p in placements]
+        board[p.y : p.y + p.height, p.x : p.x + p.width] = crop.image
+    return board
 
 
 def layout_placements(
-    shapes: List[Tuple[int, int]], gap: int = 40, stretch: bool = True, margin: int = 40
+    shapes: List[Tuple[int, int]], gap: int = 40, margin: int = 40, centres: Optional[List[float]] = None
 ) -> List[FacePlacement]:
-    widths = [w for _, w in shapes]
-    length = int(np.median(widths))
-    out_widths = [length if stretch else w for w in widths]
-    width = max(out_widths) + 2 * margin
+    centres = centres if centres is not None else [w / 2 for _, w in shapes]
+    furthest = max(centres)
     placements = []
     y = margin
-    for (h, w), out_w in zip(shapes, out_widths):
-        placements.append(FacePlacement((width - out_w) // 2, y, out_w, h, out_w / w))
+    for (h, w), centre in zip(shapes, centres):
+        placements.append(FacePlacement(margin + math.floor(furthest - centre), y, w, h, 1.0))
         y += h + gap
     return placements
+
+
+def _mid_span(mask: np.ndarray) -> Tuple[int, int]:
+    """Median start and end of the rows in the middle band of the face, so one notch does not move the length."""
+    height = mask.shape[0]
+    half = max(1, int(MID_BAND_FRAC * height / 2))
+    rows = mask[max(0, height // 2 - half) : height // 2 + half + 1]
+    filled = rows.any(1)
+    if not filled.any():
+        return 0, mask.shape[1]
+    starts = rows[filled].argmax(1)
+    ends = mask.shape[1] - rows[filled][:, ::-1].argmax(1)
+    return int(round(np.median(starts))), int(round(np.median(ends)))
+
+
+def _edge_spans(mask: np.ndarray, mid_span: Tuple[int, int]) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+    height, width = mask.shape
+    filled = mask.any(1)
+    first = mask.argmax(1)
+    last = width - mask[:, ::-1].argmax(1)
+    reach = int(END_REACH_FRAC * height) + 1
+    left = np.flatnonzero(filled & (first <= mid_span[0] + reach))
+    right = np.flatnonzero(filled & (last >= mid_span[1] - reach))
+    k_left, k_right = len(left) // 20, len(right) // 20
+    return (
+        (int(first[left[k_left]]), int(last[right[k_right]])),
+        (int(first[left[-1 - k_left]]), int(last[right[-1 - k_right]])),
+    )
 
 
 def _footprint(hom: np.ndarray, shape: Tuple[int, int], distortion: Optional[Distortion] = None) -> np.ndarray:

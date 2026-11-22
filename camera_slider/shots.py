@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from camera_slider.registration import FrameObs
+from camera_slider.registration import FrameObs, PositionPrior
 
 LOGGER = logging.getLogger(__name__)
 TIME_TOLERANCE_MS = 120.0
@@ -33,6 +33,7 @@ class PassShots:
     delay_ms: np.ndarray
     position_mm: np.ndarray
     position_resid_mm: np.ndarray
+    esp_mm: np.ndarray
     skipped_shots: List[int]
     offset_ms: float
     shift: int
@@ -105,10 +106,20 @@ def assign_pass(frame_ms: np.ndarray, rows: pd.DataFrame, cams: np.ndarray, rail
         delay_ms=delay,
         position_mm=position,
         position_resid_mm=pos[idx] - predicted,
+        esp_mm=pos[idx].astype(float),
         skipped_shots=sorted(set(shots.tolist()) - set(shots[idx].tolist())),
         offset_ms=float(offset),
         shift=int(shift),
     )
+
+
+def position_prior(shots: PassShots, rail: Optional[RailFit], direction: str) -> Optional[PositionPrior]:
+    if rail is None:
+        return None
+    offset = rail.offset_mm.get(direction, float(np.mean(list(rail.offset_mm.values()))))
+    relative_delay = np.abs(shots.delay_ms - np.median(shots.delay_ms))
+    sigma_mm = rail.resid_mm * (1 + relative_delay / LATE_MS)
+    return PositionPrior((shots.esp_mm - offset) / rail.pitch_mm, sigma_mm / rail.pitch_mm)
 
 
 def _time_offset(frame_ms: np.ndarray, t_ms: np.ndarray) -> float:

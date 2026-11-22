@@ -368,6 +368,14 @@ def knot_edge_matches(knots: List[Tuple[int, int, int, int]], bands: List[Tuple[
     return {"knot_edge_expected": matches["expected"], "knot_edge_other": matches["other"]}
 
 
+def face_length_ratio(report: Dict) -> float:
+    if report.get("face_length_mm"):
+        lengths = list(report["face_length_mm"].values())
+        return round(max(lengths) / min(lengths), 4)
+    stretch = list(report["face_stretch"].values())
+    return round(max(stretch) / min(stretch), 4)
+
+
 def report_signals(boards_dir: Path, pieces: List[str]) -> pd.DataFrame:
     rows = []
     for board in sorted({board_of(p) for p in pieces}):
@@ -375,9 +383,8 @@ def report_signals(boards_dir: Path, pieces: List[str]) -> pd.DataFrame:
         if not report_path.exists():
             continue
         report = load_json(report_path)
-        stretch = list(report["face_stretch"].values())
         board_row = {
-            "stretch_ratio": round(max(stretch) / min(stretch), 4),
+            "stretch_ratio": face_length_ratio(report),
             "board_seam_max_px": round(max(f["seam_max_px"] for f in report["faces"]), 2),
             "uncovered_columns": int(sum(f["uncovered_columns"] for f in report["faces"])),
         }

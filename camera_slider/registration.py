@@ -7,10 +7,10 @@ import numpy as np
 from scipy.optimize import least_squares
 from threadpoolctl import threadpool_limits
 
+from camera_slider.markers import detect_markers, make_aruco
 from camera_slider.wood import PairMatches
 
 LOGGER = logging.getLogger(__name__)
-ARUCO_DICT = cv2.aruco.DICT_7X7_1000
 TEMPLATE = np.array([[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]])
 FRAME_PARAMS = 8
 MARKER_PARAMS = 3
@@ -19,6 +19,15 @@ K_BOUNDS = (0.5, 2.0)
 INIT_RANSAC_UNITS = 0.25
 INIT_SCALE_TOLERANCE = 0.2
 DIST_BOUNDS = (-0.5, 0.5)
+STRIP_PARAMS = 5
+STRIP_SHEET_MARKERS = 6
+STRIP_SIGMA_UNITS = 0.02
+STRIP_SIGMA_RAD = 0.01
+RELIABLE_MARKERS = 3
+MARKER_WEIGHT = 2.0
+MARKER_AGREE_SIDES = 0.1
+TIE_MOTION_LIMIT_SIDES = 0.25
+FALSE_PAIR_SHARE = 0.5
 
 
 @dataclasses.dataclass
@@ -27,6 +36,8 @@ class FrameObs:
     ids: np.ndarray
     corners: np.ndarray
     shape: Tuple[int, int]
+    source: np.ndarray = dataclasses.field(default_factory=lambda: np.zeros(0, int))
+    n_aruco: int = 0
 
 
 @dataclasses.dataclass
@@ -65,6 +76,12 @@ class PassRegistration:
 
 
 @dataclasses.dataclass
+class PositionPrior:
+    steps: np.ndarray
+    sigma: np.ndarray
+
+
+@dataclasses.dataclass
 class FrameGap:
     after: str
     before: str
@@ -88,26 +105,22 @@ class _Problem:
     side_px: float
     estimate_k: bool
     estimate_dist: bool
+    marker_ids: np.ndarray
+    strip_turn: float
+    prior_frame: np.ndarray
+    prior_steps: np.ndarray
+    prior_sigma: np.ndarray
+    obs_scale: np.ndarray
 
 
 def make_detector() -> cv2.aruco.ArucoDetector:
-    params = cv2.aruco.DetectorParameters()
-    params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
-    return cv2.aruco.ArucoDetector(cv2.aruco.getPredefinedDictionary(ARUCO_DICT), params)
+    return make_aruco()
 
 
 def detect_frame(name: str, image: np.ndarray, detector: cv2.aruco.ArucoDetector) -> FrameObs:
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if image.ndim == 3 else image
-    corners, ids, _ = detector.detectMarkers(gray)
-    if ids is None:
-        return FrameObs(name, np.zeros(0, dtype=int), np.zeros((0, 4, 2)), gray.shape[:2])
-    ids = ids.ravel().astype(int)
-    corners = np.stack([c[0] for c in corners]).astype(np.float64)
-    unique, counts = np.unique(ids, return_counts=True)
-    keep = np.isin(ids, unique[counts == 1])
-    if not keep.all():
-        LOGGER.warning("%s: dropping duplicated marker ids %s", name, unique[counts > 1].tolist())
-    return FrameObs(name, ids[keep], corners[keep], gray.shape[:2])
+    found = detect_markers(gray, detector)
+    return FrameObs(name, found.ids, found.corners, gray.shape[:2], found.source, found.n_aruco)
 
 
 def register_pass(
@@ -122,6 +135,7 @@ def register_pass(
     estimate_distortion: bool = True,
     max_ties_per_pair: int = 50,
     seed: int = 0,
+    prior: Optional[PositionPrior] = None,
 ) -> PassRegistration:
     sides = [_marker_side(o.corners) for o in observations if len(o.ids)]
     if not sides:
@@ -132,9 +146,12 @@ def register_pass(
     principal = np.array([w / 2, h / 2])
     radius = float(np.hypot(w, h) / 2)
     pairs = _subsample(pairs, max_ties_per_pair, seed)
+    disagreeing = _disagreeing_markers(observations, side_px)
+    anchored = _anchored_frames(observations, disagreeing)
+    pairs = _drop_false_ties(pairs, observations, disagreeing, side_px)
     poses, transforms = _initialise(observations, pairs, min_markers, side_px)
 
-    excluded_markers: Set[Tuple[int, int]] = set()
+    excluded_markers: Set[Tuple[int, int]] = set(disagreeing)
     excluded_ties = [np.zeros(len(p.pts_a), bool) for p in pairs]
     k, dist = 1.0, np.zeros(2)
     for _ in range(max_rounds):
@@ -150,12 +167,15 @@ def register_pass(
             side_px,
             estimate_height,
             estimate_distortion,
+            prior,
         )
         poses, transforms, k, dist = _solve(problem, poses, transforms, k, dist, robust_scale_px)
         distortion = Distortion(float(dist[0]), float(dist[1]), (float(principal[0]), float(principal[1])), radius)
         marker_err = _marker_errors(observations, poses, transforms, side_px, distortion)
         tie_err = _tie_errors(pairs, transforms, k, principal, side_px, distortion)
-        new_markers = {key for key, err in marker_err.items() if err > outlier_px} - excluded_markers
+        new_markers = {
+            key for key, err in marker_err.items() if err > outlier_px and key[0] not in anchored
+        } - excluded_markers
         new_ties = sum(int(((e > outlier_px) & ~x).sum()) for e, x in zip(tie_err, excluded_ties))
         excluded_markers |= new_markers
         excluded_ties = [x | (e > outlier_px) for e, x in zip(tie_err, excluded_ties)]
@@ -204,6 +224,19 @@ def register_pass(
     return PassRegistration(frames, poses, side_px, pitch, k, seams, n_tie_outliers, distortion)
 
 
+def to_strip_steps(registration: PassRegistration) -> PassRegistration:
+    p = registration.pitch
+    scale = np.diag([1 / p, 1 / p, 1.0])
+    frames = [
+        dataclasses.replace(f, transform=None if f.transform is None else scale @ f.transform)
+        for f in registration.frames
+    ]
+    poses = {m: np.array([pose[0] / p, pose[1] / p, pose[2]]) for m, pose in registration.marker_poses.items()}
+    return dataclasses.replace(
+        registration, frames=frames, marker_poses=poses, marker_side_px=registration.marker_side_px * p
+    )
+
+
 def undistort_points(pts: np.ndarray, distortion: Distortion) -> np.ndarray:
     return _undistort(pts, np.array([distortion.k1, distortion.k2]), np.array(distortion.centre), distortion.radius)
 
@@ -244,6 +277,78 @@ def marker_corners(poses: np.ndarray) -> np.ndarray:
     cos, sin = np.cos(poses[:, 2]), np.sin(poses[:, 2])
     rot = np.stack([np.stack([cos, -sin], -1), np.stack([sin, cos], -1)], -2)
     return np.einsum("mij,cj->mci", rot, TEMPLATE) + poses[:, None, :2]
+
+
+def _disagreeing_markers(observations: List[FrameObs], side_px: float) -> Set[Tuple[int, int]]:
+    """Markers off the straight ID-to-position line of their own frame, judged without any tie point."""
+    disagreeing: Set[Tuple[int, int]] = set()
+    for i, obs in enumerate(observations):
+        if len(obs.ids) < RELIABLE_MARKERS:
+            continue
+        ids = np.asarray(obs.ids, float)
+        centres = obs.corners.mean(1) / side_px
+        keep = np.ones(len(ids), bool)
+        while keep.sum() >= RELIABLE_MARKERS:
+            degree = 2 if keep.sum() >= 5 else 1
+            fitted = [np.polyval(np.polyfit(ids[keep], centres[keep, a], degree), ids) for a in range(2)]
+            errors = np.hypot(centres[:, 0] - fitted[0], centres[:, 1] - fitted[1])
+            worst = int(np.argmax(np.where(keep, errors, -1.0)))
+            if errors[worst] <= MARKER_AGREE_SIDES:
+                break
+            keep[worst] = False
+        disagreeing |= {(i, int(m)) for m, kept in zip(obs.ids, keep) if not kept}
+    return disagreeing
+
+
+def _anchored_frames(observations: List[FrameObs], disagreeing: Set[Tuple[int, int]]) -> Set[int]:
+    return {
+        i
+        for i, obs in enumerate(observations)
+        if sum((i, int(m)) not in disagreeing for m in obs.ids) >= RELIABLE_MARKERS
+    }
+
+
+def _drop_false_ties(
+    pairs: List[PairMatches],
+    observations: List[FrameObs],
+    disagreeing: Set[Tuple[int, int]],
+    side_px: float,
+) -> List[PairMatches]:
+    """Removes tie points that contradict the frame motion given by the markers both frames share."""
+    kept = []
+    n_points = n_pairs = 0
+    for pair in pairs:
+        centres_a, centres_b = (
+            {
+                int(m): c.mean(0)
+                for m, c in zip(observations[f].ids, observations[f].corners)
+                if (f, int(m)) not in disagreeing
+            }
+            for f in (pair.a, pair.b)
+        )
+        shared = sorted(set(centres_a) & set(centres_b))
+        if len(shared) < RELIABLE_MARKERS:
+            kept.append(pair)
+            continue
+        motion, _ = cv2.estimateAffinePartial2D(
+            np.array([centres_a[m] for m in shared], np.float32),
+            np.array([centres_b[m] for m in shared], np.float32),
+            method=cv2.LMEDS,
+        )
+        if motion is None:
+            kept.append(pair)
+            continue
+        errors = np.linalg.norm(pair.pts_a @ motion[:, :2].T + motion[:, 2] - pair.pts_b, axis=1)
+        good = errors <= TIE_MOTION_LIMIT_SIDES * side_px
+        if good.mean() < FALSE_PAIR_SHARE:
+            n_pairs += 1
+            n_points += len(good)
+            continue
+        n_points += int((~good).sum())
+        kept.append(dataclasses.replace(pair, pts_a=pair.pts_a[good], pts_b=pair.pts_b[good]))
+    if n_points:
+        LOGGER.info("Dropped %d tie points against the marker motion, %d whole pairs", n_points, n_pairs)
+    return kept
 
 
 def _initialise(
@@ -326,6 +431,7 @@ def _build_problem(
     side_px: float,
     estimate_k: bool,
     estimate_dist: bool,
+    prior: Optional[PositionPrior] = None,
 ) -> _Problem:
     frames = sorted(transforms)
     frame_index = {f: j for j, f in enumerate(frames)}
@@ -335,6 +441,7 @@ def _build_problem(
         for m, c in zip(observations[f].ids, observations[f].corners)
         if m in poses and (f, int(m)) not in excluded_markers
     ]
+    anchored = _anchored_frames(observations, _disagreeing_markers(observations, side_px))
     markers = sorted({m for _, m, _ in obs})
     if not markers:
         msg = "No marker observation left to fix the board scale; check marker detection"
@@ -344,6 +451,9 @@ def _build_problem(
         (frame_index[p.a], frame_index[p.b], p.pts_a[~x], p.pts_b[~x])
         for p, x in zip(pairs, excluded_ties)
         if p.a in frame_index and p.b in frame_index and (~x).any()
+    ]
+    with_prior = [
+        f for f in frames if prior is not None and np.isfinite(prior.steps[f]) and np.isfinite(prior.sigma[f])
     ]
     return _Problem(
         frames=frames,
@@ -360,7 +470,31 @@ def _build_problem(
         side_px=side_px,
         estimate_k=estimate_k,
         estimate_dist=estimate_dist,
+        marker_ids=np.array(markers, float),
+        strip_turn=_strip_turn(np.stack([poses[m] for m in markers]), np.array(markers, float)),
+        prior_frame=np.array([frame_index[f] for f in with_prior], int),
+        prior_steps=np.array([prior.steps[f] for f in with_prior]) if with_prior else np.zeros(0),
+        prior_sigma=np.array([prior.sigma[f] for f in with_prior]) if with_prior else np.zeros(0),
+        obs_scale=np.array([MARKER_WEIGHT if frames[j] in anchored else 1.0 for j, _, _ in obs]).repeat(8),
     )
+
+
+def _strip_turn(poses: np.ndarray, ids: np.ndarray) -> float:
+    angle = _strip_line(poses, ids)[2]
+    rel = np.angle(np.exp(1j * (poses[:, 2] - angle)))
+    return float(np.round(np.median(rel) / (np.pi / 2)) * np.pi / 2)
+
+
+def _strip_line(poses: np.ndarray, ids: np.ndarray) -> np.ndarray:
+    if len(ids) < 2 or np.ptp(ids) == 0:
+        return np.array([poses[0, 0], poses[0, 1], 0.0, 1.0, 0.0])
+    bx, ax = np.polyfit(ids, poses[:, 0], 1)
+    by, ay = np.polyfit(ids, poses[:, 1], 1)
+    return np.array([ax, ay, np.arctan2(by, bx), np.hypot(bx, by), 0.0])
+
+
+def _sheet_joints(ids: np.ndarray) -> np.ndarray:
+    return np.floor(ids / STRIP_SHEET_MARKERS)
 
 
 def _solve(
@@ -374,14 +508,16 @@ def _solve(
     gauge = problem.markers[0]
     n_frame_cols = FRAME_PARAMS * len(problem.frames)
     n_marker_cols = MARKER_PARAMS * (len(problem.markers) - 1)
-    k_col = n_frame_cols + n_marker_cols
+    strip_col = n_frame_cols + n_marker_cols
+    k_col = strip_col + STRIP_PARAMS
 
-    def unpack(x: np.ndarray) -> Tuple[np.ndarray, np.ndarray, float, np.ndarray]:
+    def unpack(x: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float, np.ndarray]:
         h = np.concatenate([x[:n_frame_cols].reshape(-1, FRAME_PARAMS), np.ones((len(problem.frames), 1))], 1)
-        p = np.concatenate([poses[gauge][None], x[n_frame_cols:k_col].reshape(-1, 3)])
+        p = np.concatenate([poses[gauge][None], x[n_frame_cols:strip_col].reshape(-1, 3)])
         return (
             h.reshape(-1, 3, 3),
             p,
+            x[strip_col:k_col],
             x[k_col] if problem.estimate_k else k,
             x[-2:] if problem.estimate_dist else dist,
         )
@@ -390,11 +526,13 @@ def _solve(
         return _residuals(problem, *unpack(x))
 
     def jacobian(x: np.ndarray) -> np.ndarray:
-        return _jacobian(problem, *unpack(x), n_frame_cols, len(x))
+        return _jacobian(problem, *unpack(x), n_frame_cols, strip_col, len(x))
 
+    marker_poses = np.stack([poses[m] for m in problem.markers])
     x0 = np.concatenate(
         [(transforms[f] / transforms[f][2, 2]).ravel()[:FRAME_PARAMS] for f in problem.frames]
         + [poses[m] for m in problem.markers[1:]]
+        + [_strip_line(marker_poses, problem.marker_ids)]
         + ([np.array([k])] if problem.estimate_k else [])
         + ([dist] if problem.estimate_dist else [])
     )
@@ -420,23 +558,112 @@ def _solve(
         np.sqrt(np.mean(result.fun**2)),
         result.nfev,
     )
-    h, p, k, dist = unpack(result.x)
+    h, p, _, k, dist = unpack(result.x)
     new_poses = dict(poses)
     new_poses.update(zip(problem.markers, p))
     return new_poses, {f: h[j] for j, f in enumerate(problem.frames)}, float(k), np.asarray(dist, float)
 
 
-def _residuals(problem: _Problem, h: np.ndarray, p: np.ndarray, k: float, d: np.ndarray) -> np.ndarray:
+def _residuals(
+    problem: _Problem, h: np.ndarray, p: np.ndarray, strip: np.ndarray, k: float, d: np.ndarray
+) -> np.ndarray:
     corners = marker_corners(p)[problem.obs_marker].reshape(-1, 2)
     obs_frame = np.repeat(problem.obs_frame, 4)
     c, r = problem.principal, problem.radius
     obs_canon, _, _ = _project(h[obs_frame], _undistort(problem.obs_xy.reshape(-1, 2), d, c, r))
     ta, _, _ = _project(h[problem.tie_a], _shrink(_undistort(problem.tie_ua, d, c, r), k, c))
     tb, _, _ = _project(h[problem.tie_b], _shrink(_undistort(problem.tie_ub, d, c, r), k, c))
-    return problem.side_px * np.concatenate([(obs_canon - corners).ravel(), (ta - tb).ravel()])
+    image = problem.side_px * np.concatenate([(obs_canon - corners).ravel(), (ta - tb).ravel()])
+    image[: len(problem.obs_scale)] *= problem.obs_scale
+    return np.concatenate([image, _strip_residuals(problem, p, strip), _prior_residuals(problem, h, strip)])
+
+
+def _strip_residuals(problem: _Problem, p: np.ndarray, strip: np.ndarray) -> np.ndarray:
+    u = np.array([np.cos(strip[2]), np.sin(strip[2])])
+    along = problem.marker_ids * strip[3] + _sheet_joints(problem.marker_ids) * strip[4]
+    predicted = strip[:2] + along[:, None] * u
+    xy = (p[:, :2] - predicted) / STRIP_SIGMA_UNITS
+    theta = np.angle(np.exp(1j * (p[:, 2] - strip[2] - problem.strip_turn))) / STRIP_SIGMA_RAD
+    return np.concatenate([xy.ravel(), theta])
+
+
+def _prior_residuals(problem: _Problem, h: np.ndarray, strip: np.ndarray) -> np.ndarray:
+    if len(problem.prior_frame) == 0:
+        return np.zeros(0)
+    centre, _, _ = _project(h[problem.prior_frame], np.repeat(problem.principal[None], len(problem.prior_frame), 0))
+    u = np.array([np.cos(strip[2]), np.sin(strip[2])])
+    along = (centre - strip[:2]) @ u / strip[3]
+    return (along - problem.prior_steps) / problem.prior_sigma
 
 
 def _jacobian(
+    problem: _Problem,
+    h: np.ndarray,
+    p: np.ndarray,
+    strip: np.ndarray,
+    k: float,
+    d: np.ndarray,
+    n_frame_cols: int,
+    strip_col: int,
+    n_cols: int,
+) -> np.ndarray:
+    image = _image_jacobian(problem, h, p, k, d, n_frame_cols, n_cols)
+    image[: len(problem.obs_scale)] *= problem.obs_scale[:, None]
+    return np.concatenate(
+        [
+            image,
+            _strip_jacobian(problem, strip, n_frame_cols, strip_col, n_cols),
+            _prior_jacobian(problem, h, strip, strip_col, n_cols),
+        ]
+    )
+
+
+def _strip_jacobian(
+    problem: _Problem, strip: np.ndarray, n_frame_cols: int, strip_col: int, n_cols: int
+) -> np.ndarray:
+    n = len(problem.marker_ids)
+    jac = np.zeros((3 * n, n_cols))
+    u = np.array([np.cos(strip[2]), np.sin(strip[2])])
+    u_perp = np.array([-u[1], u[0]])
+    ids = problem.marker_ids
+    joints = _sheet_joints(ids)
+    along = ids * strip[3] + joints * strip[4]
+    rows = np.arange(2 * n).reshape(n, 2)
+    free_cols = n_frame_cols + MARKER_PARAMS * np.arange(n - 1)
+    for axis in range(2):
+        jac[rows[1:, axis], free_cols + axis] = 1.0 / STRIP_SIGMA_UNITS
+        jac[rows[:, axis], strip_col + axis] = -1.0 / STRIP_SIGMA_UNITS
+        jac[rows[:, axis], strip_col + 2] = -along * u_perp[axis] / STRIP_SIGMA_UNITS
+        jac[rows[:, axis], strip_col + 3] = -ids * u[axis] / STRIP_SIGMA_UNITS
+        jac[rows[:, axis], strip_col + 4] = -joints * u[axis] / STRIP_SIGMA_UNITS
+    theta_rows = 2 * n + np.arange(n)
+    jac[theta_rows[1:], free_cols + 2] = 1.0 / STRIP_SIGMA_RAD
+    jac[theta_rows, strip_col + 2] = -1.0 / STRIP_SIGMA_RAD
+    return jac
+
+
+def _prior_jacobian(problem: _Problem, h: np.ndarray, strip: np.ndarray, strip_col: int, n_cols: int) -> np.ndarray:
+    n = len(problem.prior_frame)
+    jac = np.zeros((n, n_cols))
+    if n == 0:
+        return jac
+    centre, d_h, _ = _project(h[problem.prior_frame], np.repeat(problem.principal[None], n, 0))
+    u = np.array([np.cos(strip[2]), np.sin(strip[2])])
+    u_perp = np.array([-u[1], u[0]])
+    scale = 1.0 / (strip[3] * problem.prior_sigma)
+    rows = np.arange(n)
+    jac[rows[:, None], FRAME_PARAMS * problem.prior_frame[:, None] + np.arange(FRAME_PARAMS)] = (
+        np.einsum("i,nij->nj", u, d_h) * scale[:, None]
+    )
+    rel = centre - strip[:2]
+    jac[rows, strip_col] = -u[0] * scale
+    jac[rows, strip_col + 1] = -u[1] * scale
+    jac[rows, strip_col + 2] = rel @ u_perp * scale
+    jac[rows, strip_col + 3] = -(rel @ u) / strip[3] * scale
+    return jac
+
+
+def _image_jacobian(
     problem: _Problem, h: np.ndarray, p: np.ndarray, k: float, d: np.ndarray, n_frame_cols: int, n_cols: int
 ) -> np.ndarray:
     n_pts, n_ties = 4 * len(problem.obs_frame), len(problem.tie_a)
@@ -618,6 +845,12 @@ def _align_to_strip(
     affine[:2, 2] = shift
     new_poses = {m: np.array([*(rot @ pose[:2] + shift), pose[2] + angle]) for m, pose in poses.items()}
     return new_poses, {f: affine @ t for f, t in transforms.items()}, float(pitch)
+
+
+def marker_transform(fit: FrameFit, k: float, shape: Tuple[int, int]) -> np.ndarray:
+    principal = np.array([shape[1] / 2, shape[0] / 2])
+    shrink = np.array([[1 / k, 0, principal[0] * (1 - 1 / k)], [0, 1 / k, principal[1] * (1 - 1 / k)], [0, 0, 1]])
+    return fit.transform @ np.linalg.inv(shrink)
 
 
 def _wood_transform(transform: np.ndarray, k: float, principal: np.ndarray) -> np.ndarray:

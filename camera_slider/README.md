@@ -5,18 +5,28 @@ image at a common scale, and all faces stacked along the board length. Raw frame
 output can be rebuilt from them.
 
 ```bash
-python -m camera_slider.stitch --frames_dir <board_frames_dir> --out_dir <derived_root> [--marker_mm 20]
+python -m camera_slider.stitch --frames_dir <board_frames_dir> --out_dir <derived_root> [--marker_pitch_mm 47.6]
 ```
 
 `--n_faces` (default 4) is the number of passes expected; `--allow_partial` stitches whatever was found.
-`--marker_mm` adds an absolute px/mm to the report; `--px_per_mm` with it sets the output resolution.
+`--marker_pitch_mm` (distance between marker centres) adds an absolute px/mm to the report; `--px_per_mm` with
+it sets the output resolution.
 
 ## How it works
 
 1. **Passes.** Frames are sorted by EXIF capture time and split into passes where the gap exceeds
    `--pass_gap_s` (the slider waits ~5 s and the board turns between passes).
-2. **Markers.** ArUco `DICT_7X7_1000` markers on the strip are detected with sub-pixel corners. Pixel data
-   is read with EXIF orientation ignored.
+2. **Markers** ([markers.py](markers.py)). The strip carries `DICT_7X7_100` markers in ID order on a black
+   background, so a marker's black border merges with the strip and ArUco alone misses many of them and
+   places the merged edge too far in. Every ArUco candidate square (accepted or rejected) is decoded again
+   from cell medians; the decoded markers fix the strip line (axis, pitch, marker rotation) and every
+   candidate must sit at the position of its ID on that line (otherwise it gets the ID of its position if
+   its bits agree within 12 errors). Corners are then refined by ECC alignment of the known marker pattern
+   (inner 7×7 cells only, so the merged border does not bias them), and markers that were not found or are
+   cut by the frame edge are recovered at their predicted strip position the same way. A frame with one
+   decoded marker is seeded from its neighbours; a frame with none from the grey separator bars between
+   markers. `source` in the marker cache says how each marker was found (decoded, by strip order,
+   recovered). Pixel data is read with EXIF orientation ignored.
 3. **Wood tie points.** SIFT keypoints on the wood only (HSV mask) are matched between each frame and its
    next two neighbours, with a RANSAC similarity check.
 4. **Joint bundle adjustment** per pass ([registration.py](registration.py)): one homography per frame
@@ -26,19 +36,38 @@ python -m camera_slider.stitch --frames_dir <board_frames_dir> --out_dir <derive
    different height than the strip (`k` = strip distance / wood distance). Radial lens distortion
    (`k1`, `k2`, shared by all frames of the pass, about the image centre, radius normalised by the half
    diagonal) is estimated in the same problem and applied to every observation before the homography;
-   `--no_distortion` turns it off. Soft-L1 loss, then observations above `--outlier_px` are dropped and the
-   problem is re-solved. Frames without usable markers are placed by their wood tie points alone.
+   `--no_distortion` turns it off. Before the solve, each frame's markers are checked against the
+   ID-to-position line of that frame alone (quadratic from 5 markers); a marker more than 0.1 marker side
+   off it is left out. A frame with at least 3 agreeing markers is anchored: markers place it, its marker
+   residuals weigh twice the tie points, and it is exempt from the tie outlier limit. Tie points that
+   contradict the motion of the markers two frames share (more than 0.25 marker side) are dropped, and a
+   whole pair goes when fewer than half of its points pass. Soft-L1 loss, then observations of frames
+   that are not anchored above `--outlier_px` are dropped and the problem is re-solved. Frames with 1–2
+   markers combine them with tie points and the ESP prior; frames without markers are placed by tie
+   points and the ESP prior.
+   Two soft terms join the same problem: the marker poses lie on one straight strip with a common pitch
+   (σ 0.02 marker sides, 0.01 rad; the strip is glued from sheets of 6 markers and every 6th step, e.g. 5→6,
+   is ~5 % shorter, so one joint offset per pass is fitted), and in `camera_slider.dataset` each frame's position along the strip
+   follows the ESP `pos_mm` of its shot through the rail fit (σ = rail residual × (1 + |delay − median
+   delay| / 150 ms); `--no_esp_prior` turns it off).
 5. **Board frame.** The strip axis becomes +x with marker IDs increasing along it, so faces from passes in
-   opposite directions share the same board-end orientation; x = 0 is marker 0.
-6. **Render.** Frames are undistorted, warped at the median marker size (px per marker side, the same for
-   all faces of a board) and feather-blended.
-7. **Board mask** ([wood.py](wood.py), full resolution). Wood colour mask, closing, largest component,
-   holes filled; then per column the longest wood run. Near the top and bottom edge the run is cut at a
-   near-black gap when that brings the edge closer to the board's edge line (median over ~8000 px), which
-   drops the side face seen at an angle while keeping dark wood at the edge. Edge points further than 20 px
-   from that line are interpolated from their neighbours, and both edges are smoothed.
-8. **Layout.** Faces are stretched to their median length (`--no_stretch_faces` centres them instead), so
-   the board ends line up, and stacked with `--gap_px` between faces and `--margin_px` around the board.
+   opposite directions share the same board-end orientation; x = 0 is marker 0, and one unit is one marker
+   step (centre to centre), the most reliable length on the strip.
+6. **Render.** Frames are undistorted, warped at the median marker step in px (the same for all faces of a
+   board) and feather-blended.
+7. **Board mask** ([wood.py](wood.py), full resolution). Wood colour mask (saturation > 60, value > 25),
+   closing, largest component, holes filled; then per column the longest wood run. Near the top and
+   bottom edge the run is cut at a near-black gap when that brings the edge closer to the board's edge
+   line (median over ~2000 px). Each edge then extends outward through continuous saturated wood down to
+   value 10, up to 200 px, when that stretch ends at a black gap and has no bright wood beyond its dark
+   part, so a dark band of the face stays in while the strip, a strip lath behind a dark crack and the
+   background stay out. Edge points further than 20 px from the edge line are interpolated
+   from their neighbours, and both edges are smoothed. Each board end follows the wood row by row
+   (same colour rule, median over 31 rows), at most 150 px beyond a straight line fitted to the end;
+   rows without a clear end keep that line. `face_length_mm` is the median length over the middle 20 %
+   of the face width.
+8. **Layout.** Faces keep their measured length (never resized), are centred and stacked with `--gap_px`
+   between faces and `--margin_px` around the board.
 
 ## Outputs (`<out_dir>/<board_id>/`)
 
@@ -80,11 +109,30 @@ python -m camera_slider.dataset \
 3. **Frames to shots** ([shots.py](shots.py)). The camera position from the markers is fitted to the CSV
    `pos_mm` per block (rail pitch in mm per marker ID), and each frame gets its shot index, delay and
    position; skipped shots and late frames are counted per pass.
-4. **Stitch** each pass as above; faces and directions come from the CSV, layout `ADCB` for 4 faces and
-   `AB` for 2.
+4. **Stitch** each pass as above; faces and directions come from the CSV, layout `ABCD` for 4 faces (the
+   order in which adjacent faces share an edge, checked with knots crossing the edges) and `AB` for 2.
 5. **Reject** a board (no pieces, status `rejected: ...` in `manifest.csv`) when its CSV match is not
-   `ok`, a face has uncovered columns, or a seam exceeds `--max_reject_seam_px`. Exceptions give
-   `failed: ...`. `--skip_existing` resumes a run.
+   `ok` or a face has uncovered columns. Faces are never stretched, and neither a face length difference nor a
+   seam rejects a board: a difference above `--flag_face_length_diff_mm` (2 mm) and a seam above `--flag_seam_px`
+   (5 px) are listed in `flags` of `report.json` and `manifest.csv`. `report.json` has `face_length_mm` (median
+   over the middle 20 % of the face width), `face_length_edges_mm` (near both long edges), `face_length_diff_mm` and, as an
+   independent check, `face_length_esp_mm` (the marker length corrected by the ESP-minus-marker camera
+   position at both ends of the face, median of 3 frames per end). Exceptions give `failed: ...`.
+   `--skip_existing` resumes a run.
+
+**Scale.** Lengths in mm are marker steps times `--mm_per_step`, measured with a tape measure by
+[tape_calibration.py](tape_calibration.py): the two calibration passes (a tape laid along the strip) are stitched
+like a face, the red 10 cm labels of the tape are located along the stitched pass, and mm is fitted
+against the strip position. Every gap between labels must be exactly 10 cm, otherwise the pass is refused.
+Without `--mm_per_step` the ESP rail fit is used, which varies by up to ±0.16 % between sessions.
+
+```bash
+python -m camera_slider.tape_calibration --scan_root <Optical_scan_Marek> <raw/board_64> --out_dir <derived>/tape_calibration
+```
+
+A build can be split into shards that share one marker cache and one rail fit: run once with all boards
+and `--cache_dir <dir> --rails_json <file> --calibrate_only`, then each shard with `--boards ...` and the
+same two options.
 
 Outputs under `--out_root`:
 
@@ -92,7 +140,7 @@ Outputs under `--out_root`:
 |---|---|
 | `index.csv` | Every segment and CSV with its match and reason |
 | `board_ids.jpg` | Contact sheet of first frames with assigned board IDs |
-| `cache/` | Marker detections per session |
+| `cache/` | Marker detections per session (`markers_v2_*.pkl`, or `--cache_dir`) |
 | `boards/<label>_<board>/` | `face_<area>.jpg` + mask, `unrolled.jpg` (`.tif` above 65500 px), `preview.jpg`, `report.json` with the frame-to-shot table, `mapping.json` + `owner_<area>.png` (see [Stitch mapping](#stitch-mapping)); `render_<area>.jpg` with `--save_renders` |
 | `manifest.csv` | One row per board: status, seams, height k, px/mm, shots, pieces |
 | `supervisely/<project>/boards/` | `img/<label>_<board>_x<start>.jpg` pieces (`--pieces`, `--overlap_px`) with empty `ann/` |
@@ -159,7 +207,7 @@ Every built board (and `stitch.py` output) has `mapping.json` and one `owner_<ar
 together map each pixel of the unrolled board and its pieces back to a source frame:
 
 - `mapping.json`: per face its layout row, render origin, crop box, placement in the unrolled board (offset,
-  width, x scale of the stretch), height `k`, radial distortion, and per registered frame its full path and
+  width, x scale: 1 for current builds, the stretch factor in mappings of older stretched builds), height `k`, radial distortion, and per registered frame its full path and
   homography (undistorted frame px → board units, `k` included); plus `px_per_unit`, the layout settings
   and the pieces with their x ranges. The `chain` field spells out the order of the steps.
 - `owner_<area>.png`: uint8, full resolution of the face crop; the index of the frame with the largest
@@ -218,6 +266,7 @@ coordinates of every annotated pixel per board.
 - Lens distortion is radial only (no tangential terms or decentring). On spruce_050 (50 mm lens) the four
   passes give k1 between -0.0014 and -0.0007, under 3 px at the frame corners, and the seams are unchanged.
 - Rendering a ~35k px long face at native resolution peaks at ~7 GB RAM.
-- The strip's black number band touches the marker borders, so only part of the visible markers are
-  detected; wood tie points carry the frames in between. On larch most marker observations are dropped as
-  outliers (182 of 263 on larch_020 face A, spruce 30–80 per face) while the seams stay under 1.5 px.
+- Frames with fewer than 3 agreeing markers (437 of 12,388 frames have fewer than 2) rest on wood tie
+  points and the ESP prior.
+- The mask can include a dark object or strip paper touching a board end (up to 150 px), and a chalk
+  mark at an end leaves a small notch.

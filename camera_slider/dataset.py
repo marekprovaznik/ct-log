@@ -1,7 +1,9 @@
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 import csv
+import dataclasses
 import json
+import os
 import logging
 from pathlib import Path
 import pickle
@@ -10,17 +12,19 @@ from typing import Dict, List, Optional, Tuple
 import cv2
 import numpy as np
 
-from camera_slider.compose import layout_board
+from camera_slider.compose import FaceCrop, layout_board
 from camera_slider.mapping import write_mapping
-from camera_slider.registration import FrameObs, detect_frame, make_detector
+from camera_slider.registration import FrameObs, PassRegistration, detect_frame, make_detector
 from camera_slider.scan_index import BoardMatch, index_frames, match_boards, read_logs, segment_frames
-from camera_slider.shots import PassShots, RailFit, assign_pass, camera_id, fit_rail
+from camera_slider.shots import PassShots, RailFit, assign_pass, camera_id, fit_rail, position_prior
 from camera_slider.stitch import load_image, stitch_faces
 from camera_slider.wood import make_sift, wood_features
 
 LOGGER = logging.getLogger(__name__)
 JPEG_MAX_SIDE = 65500
-FACE_ORDER = {4: "ADCB", 2: "AB"}
+FACE_ORDER = {4: "ABCD", 2: "AB"}
+ESP_END_FRAMES = 3
+MARKER_CACHE_VERSION = "v2"
 
 
 def main() -> None:
@@ -43,14 +47,29 @@ def main() -> None:
     parser.add_argument("--min_markers", type=int, default=2)
     parser.add_argument("--outlier_px", type=float, default=8.0)
     parser.add_argument("--max_seam_px", type=float, default=3.0)
-    parser.add_argument("--max_reject_seam_px", type=float, default=5.0)
+    parser.add_argument("--flag_seam_px", type=float, default=5.0, help="flag a face whose largest seam exceeds this")
     parser.add_argument("--no_height_correction", action="store_true")
     parser.add_argument("--no_distortion", action="store_true", help="do not estimate radial lens distortion")
+    parser.add_argument("--no_esp_prior", action="store_true", help="do not use the ESP shot positions in registration")
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--skip_existing", action="store_true")
     parser.add_argument("--index_only", action="store_true")
+    parser.add_argument("--cache_dir", type=Path, default=None, help="marker cache (default <out_root>/cache)")
     parser.add_argument(
-        "--no_stretch_faces", action="store_true", help="centre the faces instead of stretching them to one length"
+        "--rails_json", type=Path, default=None, help="read the rail fits from here, or fit and write them"
+    )
+    parser.add_argument("--calibrate_only", action="store_true", help="stop after marker detection and rail fit")
+    parser.add_argument(
+        "--mm_per_step",
+        type=float,
+        default=None,
+        help="mm per marker step from the tape calibration (default: the ESP rail fit)",
+    )
+    parser.add_argument(
+        "--flag_face_length_diff_mm",
+        type=float,
+        default=2.0,
+        help="flag a board whose faces differ in length by more than this",
     )
     parser.add_argument(
         "--save_renders", action="store_true", help="also write each face's stitched frames before masking"
@@ -76,8 +95,10 @@ def build_dataset(args: argparse.Namespace) -> None:
         boards = [m for m in boards if board_name(m, labels) in set(args.boards)]
 
     accepted = [m for m in boards if m.reason == "ok"]
-    observations = detect_all(accepted, args.out_root / "cache", args.workers)
-    rails = calibrate_rails(accepted, observations, labels)
+    observations = detect_all(accepted, args.cache_dir or args.out_root / "cache", args.workers)
+    rails = load_or_fit_rails(args.rails_json, accepted, observations, labels)
+    if args.calibrate_only:
+        return
     manifest_path = args.out_root / "manifest.csv"
     rows = _read_manifest(manifest_path)
     for match in boards:
@@ -116,21 +137,22 @@ def build_board(
     board_dir = args.out_root / "boards" / name
     board_dir.mkdir(parents=True, exist_ok=True)
     renders = [board_dir / f"render_{area}.jpg" for area in areas] if args.save_renders else None
-    geometries, crops, faces, px_per_unit = stitch_faces(groups, observations, features, args, render_paths=renders)
-    del features
-
-    shots = []
+    shots, priors = [], []
     t0 = segment.start
     for group, pass_number, idx in zip(groups, pass_numbers, [p for p in segment.passes]):
         frame_ms = np.array([(segment.times[i] - t0).total_seconds() * 1000 for i in idx])
         cams = np.array([camera_id(observations[p]) for p in group])
-        shots.append(assign_pass(frame_ms, log.rows[log.rows["pass"] == pass_number], cams, rail))
+        rows = log.rows[log.rows["pass"] == pass_number]
+        shots.append(assign_pass(frame_ms, rows, cams, rail))
+        priors.append(None if args.no_esp_prior else position_prior(shots[-1], rail, str(rows["dir"].iloc[0])))
+    geometries, crops, faces, px_per_unit = stitch_faces(
+        groups, observations, features, args, render_paths=renders, priors=priors
+    )
+    del features
 
     order = FACE_ORDER.get(len(crops), "".join(areas))
     ordered = sorted(range(len(crops)), key=lambda k: order.index(areas[k]) if areas[k] in order else k)
-    unrolled, stretch = layout_board(
-        [crops[k] for k in ordered], args.gap_px, not args.no_stretch_faces, args.margin_px
-    )
+    unrolled = layout_board([crops[k] for k in ordered], args.gap_px, args.margin_px)
 
     for crop, area in zip(crops, areas):
         _save(board_dir / f"face_{area}.jpg", crop.image)
@@ -142,7 +164,34 @@ def build_board(
         cv2.resize(unrolled, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA),
         [cv2.IMWRITE_JPEG_QUALITY, 90],
     )
-    rejected = reject_reasons(faces, len(crops), log.passes, args.max_reject_seam_px)
+    marker_pitch_units = float(np.median([g.pitch for g in geometries]))
+    mm_per_step = args.mm_per_step or (rail.pitch_mm if rail is not None else None)
+    marker_side_mm = mm_per_step / marker_pitch_units if mm_per_step else None
+    px_per_mm = px_per_unit / mm_per_step if mm_per_step else None
+    face_length_mm = {areas[k]: round(crops[k].length_px / px_per_mm, 2) for k in ordered} if px_per_mm else None
+    face_length_edges_mm = (
+        {areas[k]: [round((e - s) / px_per_mm, 2) for s, e in crops[k].edge_spans] for k in ordered}
+        if px_per_mm
+        else None
+    )
+    directions = [str(log.rows.loc[log.rows["pass"] == p, "dir"].iloc[0]) for p in pass_numbers]
+    esp_steps = (
+        {
+            areas[k]: esp_face_length(
+                geometries[k], crops[k], shots[k], rail, directions[k], observations[groups[k][0]].shape
+            )
+            for k in ordered
+        }
+        if rail is not None and mm_per_step
+        else {}
+    )
+    esp_length_mm = (
+        {area: round(steps * mm_per_step, 2) if steps is not None else None for area, steps in esp_steps.items()}
+        if esp_steps
+        else None
+    )
+    rejected = reject_reasons(faces, len(crops), log.passes)
+    flags = length_reasons(face_length_mm, args.flag_face_length_diff_mm) + seam_reasons(faces, args.flag_seam_px)
     pieces = [] if rejected else write_pieces(unrolled, name, args)
     mapping_bytes = write_mapping(
         board_dir,
@@ -157,16 +206,13 @@ def build_board(
         unrolled.shape[:2],
         pieces,
         args.gap_px,
-        not args.no_stretch_faces,
         args.margin_px,
     )
 
-    marker_pitch_units = float(np.median([g.pitch for g in geometries]))
-    marker_side_mm = rail.pitch_mm / marker_pitch_units if rail is not None else None
-    px_per_mm = px_per_unit / marker_side_mm if marker_side_mm else None
     report = {
         "board": name,
         "status": f"rejected: {'; '.join(rejected)}" if rejected else "ok",
+        "flags": flags,
         "board_id": log.board,
         "block": match.block,
         "session": log.session,
@@ -174,11 +220,18 @@ def build_board(
         "match_reason": match.reason,
         "mtime_check": match.mtime_check,
         "face_order": [areas[k] for k in ordered],
-        "face_stretch": dict(zip([areas[k] for k in ordered], stretch)),
-        "px_per_marker_side": px_per_unit,
+        "face_length_mm": face_length_mm,
+        "face_length_edges_mm": face_length_edges_mm,
+        "face_length_diff_mm": round(max(face_length_mm.values()) - min(face_length_mm.values()), 2)
+        if face_length_mm
+        else None,
+        "face_length_esp_mm": esp_length_mm,
+        "px_per_marker_step": px_per_unit,
         "marker_side_mm": marker_side_mm,
         "px_per_mm": px_per_mm,
         "rail_pitch_mm": rail.pitch_mm if rail is not None else None,
+        "mm_per_step": mm_per_step,
+        "mm_scale": "tape" if args.mm_per_step else "rail",
         "unrolled": unrolled_path.name,
         "unrolled_shape": list(unrolled.shape[:2]),
         "pieces": pieces,
@@ -193,16 +246,62 @@ def build_board(
     return _manifest_row(report, faces, shots, segment.n_frames, log.shots)
 
 
-def reject_reasons(faces: List[Dict], n_faces: int, n_passes: int, max_seam_px: float) -> List[str]:
+def reject_reasons(faces: List[Dict], n_faces: int, n_passes: int) -> List[str]:
     reasons = []
     if n_faces != n_passes:
         reasons.append(f"{n_faces} of {n_passes} faces")
     for face in faces:
         if face["uncovered_columns"] > 0:
             reasons.append(f"face {face['face']}: {face['uncovered_columns']} uncovered columns")
-        if face["seam_max_px"] is None or face["seam_max_px"] > max_seam_px:
-            reasons.append(f"face {face['face']}: seam {face['seam_max_px']} px")
+        if face["seam_max_px"] is None:
+            reasons.append(f"face {face['face']}: no seam measured")
     return reasons
+
+
+def seam_reasons(faces: List[Dict], max_seam_px: float) -> List[str]:
+    return [
+        f"face {face['face']}: seam {face['seam_max_px']:.2f} px"
+        for face in faces
+        if face["seam_max_px"] is not None and face["seam_max_px"] > max_seam_px
+    ]
+
+
+def esp_face_length(
+    geometry: PassRegistration,
+    crop: FaceCrop,
+    shots: PassShots,
+    rail: RailFit,
+    direction: str,
+    frame_shape: Tuple[int, int],
+    n_frames: int = ESP_END_FRAMES,
+) -> Optional[float]:
+    offset = rail.offset_mm.get(direction, float(np.mean(list(rail.offset_mm.values()))))
+    centre = np.array([frame_shape[1] / 2, frame_shape[0] / 2, 1.0])
+    cams, esp = [], []
+    for fit, esp_mm in zip(geometry.frames, shots.esp_mm):
+        if fit.registered and np.isfinite(esp_mm):
+            p = fit.transform @ centre
+            cams.append(p[0] / p[2])
+            esp.append((esp_mm - offset) / rail.pitch_mm)
+    if len(cams) < 2 * n_frames:
+        return None
+    cams_arr, esp_arr = np.array(cams), np.array(esp)
+    order = np.argsort(cams_arr)
+    start = float(np.median((esp_arr - cams_arr)[order[:n_frames]]))
+    end = float(np.median((esp_arr - cams_arr)[order[-n_frames:]]))
+    x0, x1 = crop.x_range
+    return round((x1 + end) - (x0 + start), 4)
+
+
+def length_reasons(face_length_mm: Optional[Dict[str, float]], max_diff_mm: float) -> List[str]:
+    if face_length_mm is None:
+        return ["face length unknown (no rail calibration)"]
+    lengths = face_length_mm.values()
+    diff = max(lengths) - min(lengths)
+    if diff <= max_diff_mm:
+        return []
+    listed = ", ".join(f"{area} {length:.1f}" for area, length in face_length_mm.items())
+    return [f"face length differs by {diff:.1f} mm ({listed})"]
 
 
 def write_pieces(unrolled: np.ndarray, name: str, args: argparse.Namespace) -> List[Dict]:
@@ -239,7 +338,7 @@ def detect_all(boards: List[BoardMatch], cache_dir: Path, workers: int) -> Dict[
     cache_dir.mkdir(parents=True, exist_ok=True)
     observations: Dict[Path, FrameObs] = {}
     for match in boards:
-        cache = cache_dir / f"markers_s{match.log.session:03d}_{match.block}.pkl"
+        cache = cache_dir / f"markers_{MARKER_CACHE_VERSION}_s{match.log.session:03d}_{match.block}.pkl"
         if cache.exists():
             cached = pickle.loads(cache.read_bytes())
             if list(cached) == match.segment.frames:
@@ -256,6 +355,18 @@ def detect_all(boards: List[BoardMatch], cache_dir: Path, workers: int) -> Dict[
         observations.update(found)
         LOGGER.info("Markers detected for board %s (%d frames)", match.log.board, len(found))
     return observations
+
+
+def load_or_fit_rails(
+    path: Optional[Path], boards: List[BoardMatch], observations: Dict[Path, FrameObs], labels: Dict[str, str]
+) -> Dict[str, RailFit]:
+    if path is not None and path.exists():
+        LOGGER.info("Rails read from %s", path)
+        return {block: RailFit(**fit) for block, fit in json.loads(path.read_text()).items()}
+    rails = calibrate_rails(boards, observations, labels)
+    if path is not None:
+        path.write_text(json.dumps({block: dataclasses.asdict(fit) for block, fit in rails.items()}, indent=1))
+    return rails
 
 
 def calibrate_rails(
@@ -387,6 +498,8 @@ def _manifest_row(report: Dict, faces: List[Dict], shots: List[PassShots], n_fra
         "seam_max_px": round(max(seams), 2) if seams else "",
         "height_k": "/".join(f"{f['height_scale_k']:.4f}" for f in faces),
         "px_per_mm": round(report["px_per_mm"], 3) if report["px_per_mm"] else "",
+        "face_length_diff_mm": report["face_length_diff_mm"] if report["face_length_diff_mm"] is not None else "",
+        "flags": "; ".join(report["flags"]),
         "unrolled_h": report["unrolled_shape"][0],
         "unrolled_w": report["unrolled_shape"][1],
         "pieces": len(report["pieces"]),
@@ -404,10 +517,14 @@ def _read_manifest(path: Path) -> Dict[str, Dict]:
 
 def _write_manifest(path: Path, rows: Dict[str, Dict]) -> None:
     fields = list(dict.fromkeys(k for row in rows.values() for k in row))
-    with path.open("w", newline="") as f:
+    temporary = path.with_suffix(".csv.tmp")
+    with temporary.open("w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
         writer.writerows(rows[k] for k in sorted(rows))
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(temporary, path)
 
 
 def _save(path: Path, image: np.ndarray) -> Path:

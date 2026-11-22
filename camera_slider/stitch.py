@@ -1,26 +1,32 @@
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 import dataclasses
+import functools
 import datetime
 import json
 import logging
 from pathlib import Path
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
 from PIL import Image
 
 from camera_slider.compose import FaceCrop, crop_board, layout_board, render_face
-from camera_slider.mapping import write_mapping
+from camera_slider.mapping import distort_points, write_mapping
+from camera_slider.markers import SOURCE_RECOVERED, dictionary_bits, refine_marker
 from camera_slider.registration import (
     FrameObs,
     PassRegistration,
+    PositionPrior,
     detect_frame,
     find_gaps,
+    marker_corners,
+    marker_transform,
     make_detector,
     register_pass,
+    to_strip_steps,
 )
 from camera_slider.wood import PairMatches, make_sift, match_features, wood_features
 
@@ -45,7 +51,7 @@ def main() -> None:
     parser.add_argument("--pass_gap_s", type=float, default=3.0)
     parser.add_argument("--min_markers", type=int, default=2)
     parser.add_argument("--outlier_px", type=float, default=8.0)
-    parser.add_argument("--marker_mm", type=float, default=None)
+    parser.add_argument("--marker_pitch_mm", type=float, default=None, help="distance between marker centres")
     parser.add_argument("--px_per_mm", type=float, default=None)
     parser.add_argument("--no_height_correction", action="store_true")
     parser.add_argument("--no_distortion", action="store_true", help="do not estimate radial lens distortion")
@@ -59,8 +65,8 @@ def main() -> None:
 
 
 def stitch_board(args: argparse.Namespace) -> Dict:
-    if args.px_per_mm is not None and args.marker_mm is None:
-        msg = "--px_per_mm needs --marker_mm"
+    if args.px_per_mm is not None and args.marker_pitch_mm is None:
+        msg = "--px_per_mm needs --marker_pitch_mm"
         raise ValueError(msg)
     board_id = args.board_id or args.frames_dir.name
     paths = sorted(p for p in args.frames_dir.iterdir() if p.suffix.lower() in IMAGE_SUFFIXES)
@@ -83,18 +89,18 @@ def stitch_board(args: argparse.Namespace) -> Dict:
         {p: a[0] for p, a in analysed.items()},
         {p: a[1] for p, a in analysed.items()},
         args,
-        px_per_unit=args.px_per_mm * args.marker_mm if args.px_per_mm is not None else None,
+        px_per_unit=args.px_per_mm * args.marker_pitch_mm if args.px_per_mm is not None else None,
     )
     for face, crop in enumerate(crops, start=1):
         cv2.imwrite(str(out_dir / f"face_{face}.{args.ext}"), crop.image, _write_params(args.ext))
         cv2.imwrite(str(out_dir / f"face_{face}_mask.png"), crop.mask.astype(np.uint8) * 255)
 
-    board, _ = layout_board(crops)
+    board = layout_board(crops)
     order = list(range(len(crops)))
     shapes = [analysed[g[0]][0].shape for g in passes]
     areas = [str(k) for k in range(1, len(crops) + 1)]
     write_mapping(
-        out_dir, board_id, passes, geometries, crops, shapes, areas, order, px_per_unit, board.shape[:2], [], 40, True, 40
+        out_dir, board_id, passes, geometries, crops, shapes, areas, order, px_per_unit, board.shape[:2], [], 40, 40
     )
     cv2.imwrite(str(out_dir / f"unrolled.{args.ext}"), board, _write_params(args.ext))
     scale = min(1.0, args.preview_width / board.shape[1])
@@ -107,9 +113,9 @@ def stitch_board(args: argparse.Namespace) -> Dict:
         "n_frames": len(paths),
         "n_passes": len(passes),
         "pass_grouping": f"capture-time gap > {args.pass_gap_s} s",
-        "px_per_marker": px_per_unit,
-        "marker_mm": args.marker_mm,
-        "px_per_mm": px_per_unit / args.marker_mm if args.marker_mm else None,
+        "px_per_marker_step": px_per_unit,
+        "marker_pitch_mm": args.marker_pitch_mm,
+        "px_per_mm": px_per_unit / args.marker_pitch_mm if args.marker_pitch_mm else None,
         "unrolled_shape": list(board.shape[:2]),
         "faces": faces,
     }
@@ -139,19 +145,27 @@ def stitch_faces(
     args: argparse.Namespace,
     px_per_unit: Optional[float] = None,
     render_paths: Optional[List[Path]] = None,
+    priors: Optional[List[Optional[PositionPrior]]] = None,
 ) -> Tuple[List[PassRegistration], List[FaceCrop], List[Dict], float]:
-    geometries = [
-        solve_face(
-            [observations[p] for p in group],
-            [features[p] for p in group],
-            args.min_markers,
-            args.outlier_px,
-            not args.no_height_correction,
-            args.workers,
-            not args.no_distortion,
+    geometries = []
+    for group, prior in zip(groups, priors if priors is not None else [None] * len(groups)):
+        solve = functools.partial(
+            solve_face,
+            features=[features[p] for p in group],
+            min_markers=args.min_markers,
+            outlier_px=args.outlier_px,
+            height_correction=not args.no_height_correction,
+            workers=args.workers,
+            distortion=not args.no_distortion,
+            prior=prior,
         )
-        for group in groups
-    ]
+        pass_obs = [observations[p] for p in group]
+        geometry = solve(pass_obs)
+        recovered = recover_weak_frames(pass_obs, geometry, lambda i: load_image(group[i]))
+        if recovered is not None:
+            geometry = solve(recovered)
+            observations.update(zip(group, recovered))
+        geometries.append(to_strip_steps(geometry))
     if px_per_unit is None:
         px_per_unit = float(np.median([g.marker_side_px for g in geometries]))
     crops, faces = [], []
@@ -169,6 +183,49 @@ def stitch_faces(
     return geometries, crops, faces, px_per_unit
 
 
+def recover_weak_frames(
+    observations: List[FrameObs], geometry: PassRegistration, load: Callable[[int], np.ndarray]
+) -> Optional[List[FrameObs]]:
+    weak = [
+        i for i, (obs, fit) in enumerate(zip(observations, geometry.frames)) if fit.registered and len(obs.ids) < 2
+    ]
+    if not weak or len(geometry.marker_poses) < 2:
+        return None
+    codes = dictionary_bits()
+    ids = np.array(sorted(geometry.marker_poses))
+    board_corners = marker_corners(np.stack([geometry.marker_poses[m] for m in ids]))
+    updated = list(observations)
+    added = 0
+    for i in weak:
+        obs = observations[i]
+        gray = cv2.cvtColor(load(i), cv2.COLOR_BGR2GRAY)
+        to_frame = np.linalg.inv(marker_transform(geometry.frames[i], geometry.height_k, obs.shape))
+        flat = cv2.perspectiveTransform(board_corners.reshape(1, -1, 2), to_frame)[0]
+        raw = distort_points(flat, geometry.distortion).reshape(-1, 4, 2)
+        found = {int(m): c for m, c in zip(obs.ids, obs.corners)}
+        sources = {int(m): int(s) for m, s in zip(obs.ids, obs.source)} if len(obs.source) == len(obs.ids) else {}
+        h, w = obs.shape
+        for marker_id, corners in zip(ids, raw):
+            x, y = corners.mean(0)
+            if int(marker_id) in found or not (0 <= x < w and 0 <= y < h) or marker_id >= len(codes):
+                continue
+            refined = refine_marker(gray, corners, codes[marker_id])
+            if refined is not None:
+                found[int(marker_id)] = refined[0]
+                sources[int(marker_id)] = SOURCE_RECOVERED
+        if len(found) > len(obs.ids):
+            added += len(found) - len(obs.ids)
+            keys = sorted(found)
+            updated[i] = dataclasses.replace(
+                obs,
+                ids=np.array(keys),
+                corners=np.stack([found[k] for k in keys]),
+                source=np.array([sources.get(k, SOURCE_RECOVERED) for k in keys]),
+            )
+    LOGGER.info("Projected markers into %d weak frames: %d markers recovered", len(weak), added)
+    return updated if added else None
+
+
 def analyse_frame(path: Path) -> Tuple[FrameObs, Tuple[np.ndarray, Optional[np.ndarray]]]:
     image = load_image(path)
     return detect_frame(path.name, image, make_detector()), wood_features(image, make_sift())
@@ -182,6 +239,7 @@ def solve_face(
     height_correction: bool,
     workers: int,
     distortion: bool = True,
+    prior: Optional[PositionPrior] = None,
 ) -> PassRegistration:
     candidates = [(a, b) for a in range(len(features)) for b in range(a + 1, min(a + 1 + MATCH_SPAN, len(features)))]
     with ThreadPoolExecutor(workers) as pool:
@@ -194,6 +252,7 @@ def solve_face(
         outlier_px=outlier_px,
         estimate_height=height_correction,
         estimate_distortion=distortion,
+        prior=prior,
     )
 
 

@@ -2,8 +2,8 @@ import datetime
 from pathlib import Path
 from typing import Dict, List
 
+from camera_slider.markers import STRIP_DICT
 from camera_slider.registration import (
-    ARUCO_DICT,
     Distortion,
     PassRegistration,
     detect_frame,
@@ -150,6 +150,18 @@ def test_group_passes_needs_capture_times() -> None:
         group_passes([Path("a.jpg")], [None], gap_s=3.0)
 
 
+def test_segment_board_follows_skewed_ends() -> None:
+    """The mask ends follow slanted board ends, so the length differs between the long edges."""
+    image = np.zeros((400, 1000, 3), np.uint8)
+    corners = np.array([[100, 50], [900, 50], [930, 350], [80, 350]], np.int32)
+    cv2.fillPoly(image, [corners], (60, 130, 200))
+    mask = segment_board(image, scale=1, edge_window=51, smooth_px=11, edge_margin=10, reference_window=101)
+    top = np.flatnonzero(mask[60])
+    bottom = np.flatnonzero(mask[340])
+    assert abs(top[0] - 99) <= 4 and abs(top[-1] - 901) <= 4
+    assert abs(bottom[0] - 81) <= 4 and abs(bottom[-1] - 929) <= 4
+
+
 def test_segment_board_fills_dark_defects() -> None:
     """A dark knot inside the board stays part of the board mask; the strip and background do not."""
     image = np.zeros((200, 400, 3), np.uint8)
@@ -199,7 +211,7 @@ def _strip_texture(width: int) -> List[np.ndarray]:
     pitch = PITCH_MM * TEXTURE_PX_PER_MM
     height = side + 40
     strip = np.full((height, width, 3), 245, np.uint8)
-    dictionary = cv2.aruco.getPredefinedDictionary(ARUCO_DICT)
+    dictionary = cv2.aruco.getPredefinedDictionary(STRIP_DICT)
     marker_id = 0
     while 20 + marker_id * pitch + side < width:
         x = int(round(20 + marker_id * pitch))
@@ -221,3 +233,55 @@ def test_segment_board_drops_side_sliver_and_edge_notch() -> None:
     assert mask[130, 315]
     assert mask[90, 400]
     assert not mask[30, 400]
+
+
+def test_segment_board_keeps_long_edge_drifting_near_the_end() -> None:
+    """A long edge drifting away near the board end stays on the real edge."""
+    image = np.zeros((400, 8000, 3), np.uint8)
+    corners = np.array([[20, 100], [7000, 100], [7980, 70], [7980, 300], [20, 300]], np.int32)
+    cv2.fillPoly(image, [corners], (60, 130, 200))
+    mask = segment_board(image)
+    assert abs(np.flatnonzero(mask[:, 7900])[0] - 72) <= 8
+
+
+def test_segment_board_follows_stepped_end() -> None:
+    """Each row of a stepped board end keeps its own end."""
+    image = np.zeros((400, 1000, 3), np.uint8)
+    image[100:200, 100:900] = (60, 130, 200)
+    image[200:300, 100:860] = (60, 130, 200)
+    mask = segment_board(image, edge_window=51, smooth_px=11, edge_margin=10, reference_window=101)
+    assert mask[150, 880]
+    assert not mask[250, 880]
+
+
+def test_segment_board_includes_dark_band_but_stops_at_black_gap() -> None:
+    """A dark band touching the board is kept; wood beyond a black gap is not."""
+    image = np.zeros((500, 1000, 3), np.uint8)
+    image[150:350, 50:950] = (60, 130, 200)
+    image[120:150, 50:950] = (5, 8, 18)
+    image[380:420, 50:950] = (5, 8, 18)
+    mask = segment_board(image, edge_window=51, smooth_px=11, edge_margin=10, reference_window=101)
+    assert mask[135, 500]
+    assert not mask[400, 500]
+
+
+def test_segment_board_does_not_take_bright_wood_behind_a_dark_crack() -> None:
+    """Bright wood beyond a dark crack at the edge (a strip lath) stays outside the mask."""
+    image = np.zeros((500, 1000, 3), np.uint8)
+    image[200:400, 50:950] = (60, 130, 200)
+    image[180:200, 50:950] = (5, 8, 18)
+    image[120:180, 50:950] = (60, 130, 200)
+    mask = segment_board(image, edge_window=51, smooth_px=11, edge_margin=10, reference_window=101)
+    assert mask[300, 500]
+    assert not mask[150, 500]
+
+
+def test_segment_board_does_not_take_a_lath_behind_a_moderately_dark_crack() -> None:
+    """A lath behind a crack that is only darker than the face, not black, stays outside the mask."""
+    image = np.zeros((500, 1000, 3), np.uint8)
+    image[200:400, 50:950] = (60, 130, 200)
+    image[180:200, 50:950] = (25, 50, 80)
+    image[120:180, 50:950] = (60, 130, 200)
+    mask = segment_board(image, edge_window=51, smooth_px=11, reference_window=101)
+    assert mask[300, 500]
+    assert not mask[150, 500]

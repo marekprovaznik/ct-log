@@ -60,7 +60,7 @@ def stitched(tmp_path_factory: pytest.TempPathFactory) -> Dict:
         )
         groups.append([out_dir / n for n in names])
         geometries.append(PassRegistration(fits, {}, 20.0, 1.0, 1.0, {}, 0, distortion))
-    unrolled, _ = layout_board([crops[1], crops[0]], 10, True, 5)
+    unrolled = layout_board([crops[1], crops[0]], 10, 5)
     pieces = [{"name": "b_x00000.jpg", "x0": 0, "x1": unrolled.shape[1]}]
     write_mapping(
         out_dir,
@@ -75,7 +75,6 @@ def stitched(tmp_path_factory: pytest.TempPathFactory) -> Dict:
         unrolled.shape[:2],
         pieces,
         10,
-        True,
         5,
     )
     return {"dir": out_dir, "crops": crops, "unrolled": unrolled, "images": images}
@@ -138,12 +137,28 @@ def test_distort_points_inverts_undistort() -> None:
     assert np.abs(undistort_points(distort_points(pts, distortion), distortion) - pts).max() < 1e-9
 
 
-def test_layout_placements_stretch_to_median() -> None:
-    """Faces are stretched to the median length and stacked with the gap."""
-    placements = layout_placements([(10, 100), (20, 110), (5, 90)], gap=3, stretch=True, margin=2)
-    assert [p.width for p in placements] == [100, 100, 100]
+def test_layout_placements_keep_face_length() -> None:
+    """Faces keep their measured length, are centred and stacked with the gap."""
+    placements = layout_placements([(10, 100), (20, 110), (5, 90)], gap=3, margin=2)
+    assert [p.width for p in placements] == [100, 110, 90]
+    assert [p.x for p in placements] == [7, 2, 12]
     assert [p.y for p in placements] == [2, 15, 38]
-    assert placements[1].scale_x == pytest.approx(100 / 110)
+    assert all(p.scale_x == 1.0 for p in placements)
+
+
+def test_layout_placements_align_face_centres() -> None:
+    """Faces with skewed ends are aligned by the centre of their mid-width span, not of their bounding box."""
+    placements = layout_placements([(10, 100), (10, 110)], gap=3, margin=2, centres=[50.0, 60.0])
+    assert [p.x for p in placements] == [12, 2]
+
+
+def test_stretched_placement_from_old_mapping_round_trip() -> None:
+    """A stretched placement recorded by an older build still maps crop px to unrolled px and back."""
+    face = FaceMap("A", 0, (0.0, 0.0), (0, 0, 110, 20), FacePlacement(2, 2, 100, 20, 100 / 110), 1.0, 1.0, None, [], None)
+    crop = np.array([[0.0, 3.0], [54.5, 10.0], [109.0, 19.0]])
+    rows, back = unrolled_to_face(BoardMap("b", (30, 104), [face], []), face_to_unrolled(face, crop))
+    assert (rows == 0).all()
+    assert np.abs(back - crop).max() < 1e-9
 
 
 def test_edited_shift_round_trip() -> None:
